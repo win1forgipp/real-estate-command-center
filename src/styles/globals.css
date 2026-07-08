@@ -4,6 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Theme architecture: light tokens live on :root and dark tokens on .dark.
+   Future theme switching will toggle the dark class on html via ThemeProvider. */
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans);

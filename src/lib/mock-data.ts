@@ -1,4 +1,25 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  CalendarClock,
+  CheckSquare,
+  DollarSign,
+  FileText,
+  Home,
+  TrendingDown,
+  Users,
+} from "lucide-react";
+
 import type { StatusVariant } from "@/components/dashboard/status-badge";
+
+export type DashboardCardIcon =
+  | "transactions"
+  | "deadlines"
+  | "tasks"
+  | "closings"
+  | "commissions"
+  | "listings"
+  | "buyers"
+  | "attention";
 
 export type DashboardListItem = {
   label: string;
@@ -7,24 +28,46 @@ export type DashboardListItem = {
   statusLabel?: string;
 };
 
+export type DashboardTrend = {
+  label: string;
+  direction: "up" | "down" | "neutral";
+};
+
 export type DashboardCardData = {
   id: string;
+  icon: DashboardCardIcon;
   title: string;
   value: string;
-  subtitle: string;
+  description: string;
   status?: StatusVariant;
   statusLabel?: string;
+  trend?: DashboardTrend;
+  href?: string;
   items?: DashboardListItem[];
+};
+
+export const dashboardCardIcons: Record<DashboardCardIcon, LucideIcon> = {
+  transactions: FileText,
+  deadlines: CalendarClock,
+  tasks: CheckSquare,
+  closings: Home,
+  commissions: DollarSign,
+  listings: Home,
+  buyers: Users,
+  attention: TrendingDown,
 };
 
 export const dashboardOverviewCards: DashboardCardData[] = [
   {
     id: "active-transactions",
+    icon: "transactions",
     title: "Active Transactions",
     value: "5",
-    subtitle: "2 buyer deals, 3 listings",
+    description: "2 buyer deals, 3 listings",
     status: "info",
     statusLabel: "In progress",
+    trend: { label: "+1 this week", direction: "up" },
+    href: "/transactions",
     items: [
       { label: "142 Oak Lane", detail: "Buyer · Under contract" },
       { label: "88 Pine Street", detail: "Seller · Inspection week" },
@@ -33,11 +76,14 @@ export const dashboardOverviewCards: DashboardCardData[] = [
   },
   {
     id: "upcoming-deadlines",
+    icon: "deadlines",
     title: "Upcoming Deadlines",
     value: "3",
-    subtitle: "Next 7 days",
+    description: "Next 7 days",
     status: "warning",
     statusLabel: "Due soon",
+    trend: { label: "2 due this week", direction: "neutral" },
+    href: "/deadlines",
     items: [
       {
         label: "Inspection deadline",
@@ -61,11 +107,14 @@ export const dashboardOverviewCards: DashboardCardData[] = [
   },
   {
     id: "tasks-due-today",
+    icon: "tasks",
     title: "Tasks Due Today",
     value: "4",
-    subtitle: "Needs action today",
+    description: "Needs action today",
     status: "danger",
     statusLabel: "Due today",
+    trend: { label: "2 overdue", direction: "down" },
+    href: "/tasks",
     items: [
       { label: "Send repair addendum", detail: "88 Pine Street" },
       { label: "Confirm showing feedback", detail: "Buyer Johnson" },
@@ -75,11 +124,14 @@ export const dashboardOverviewCards: DashboardCardData[] = [
   },
   {
     id: "closings-this-month",
+    icon: "closings",
     title: "Closings This Month",
     value: "2",
-    subtitle: "Scheduled closings",
+    description: "Scheduled closings",
     status: "success",
     statusLabel: "On track",
+    trend: { label: "On schedule", direction: "up" },
+    href: "/transactions",
     items: [
       {
         label: "142 Oak Lane",
@@ -97,11 +149,14 @@ export const dashboardOverviewCards: DashboardCardData[] = [
   },
   {
     id: "commission-pipeline",
+    icon: "commissions",
     title: "Commission Pipeline",
     value: "$18,400",
-    subtitle: "Expected before fees",
+    description: "Expected before fees",
     status: "info",
     statusLabel: "Pipeline",
+    trend: { label: "+$4,200 pending", direction: "up" },
+    href: "/commissions",
     items: [
       { label: "142 Oak Lane", detail: "$9,200 expected" },
       { label: "220 Cedar Drive", detail: "$6,800 expected" },
@@ -110,11 +165,14 @@ export const dashboardOverviewCards: DashboardCardData[] = [
   },
   {
     id: "active-listings",
+    icon: "listings",
     title: "Active Listings",
     value: "3",
-    subtitle: "Currently on market",
+    description: "Currently on market",
     status: "default",
     statusLabel: "Live",
+    trend: { label: "1 new listing", direction: "up" },
+    href: "/sellers",
     items: [
       { label: "88 Pine Street", detail: "Listed 12 days" },
       { label: "615 Birch Ave", detail: "Listed 4 days" },
@@ -123,11 +181,14 @@ export const dashboardOverviewCards: DashboardCardData[] = [
   },
   {
     id: "buyer-leads",
+    icon: "buyers",
     title: "Buyer Leads",
     value: "6",
-    subtitle: "Active buyer clients",
+    description: "Active buyer clients",
     status: "info",
     statusLabel: "Active",
+    trend: { label: "+2 new leads", direction: "up" },
+    href: "/buyers",
     items: [
       { label: "Johnson family", detail: "Showing this week" },
       { label: "Martinez buyers", detail: "Needs lender intro" },
@@ -136,11 +197,14 @@ export const dashboardOverviewCards: DashboardCardData[] = [
   },
   {
     id: "needs-attention",
+    icon: "attention",
     title: "Needs Attention",
     value: "3",
-    subtitle: "Items to review now",
+    description: "Items to review now",
     status: "danger",
     statusLabel: "Action needed",
+    trend: { label: "1 overdue item", direction: "down" },
+    href: "/tasks",
     items: [
       {
         label: "Overdue inspection response",
@@ -164,7 +228,79 @@ export const dashboardOverviewCards: DashboardCardData[] = [
   },
 ];
 
+export type MockNotification = {
+  id: string;
+  title: string;
+  detail: string;
+  time: string;
+  unread?: boolean;
+};
+
+export const mockNotifications: MockNotification[] = [
+  {
+    id: "1",
+    title: "Inspection deadline tomorrow",
+    detail: "142 Oak Lane needs a response",
+    time: "2h ago",
+    unread: true,
+  },
+  {
+    id: "2",
+    title: "Task due today",
+    detail: "Upload lender pre-approval for 501 Maple Court",
+    time: "4h ago",
+    unread: true,
+  },
+  {
+    id: "3",
+    title: "Showing feedback added",
+    detail: "Buyer Johnson left notes on 615 Birch Ave",
+    time: "Yesterday",
+  },
+];
+
+export type MockSearchResult = {
+  id: string;
+  label: string;
+  category: "contacts" | "transactions" | "properties" | "documents" | "templates";
+  detail: string;
+};
+
+export const mockSearchResults: MockSearchResult[] = [
+  {
+    id: "search-1",
+    label: "142 Oak Lane",
+    category: "transactions",
+    detail: "Buyer transaction · Under contract",
+  },
+  {
+    id: "search-2",
+    label: "Johnson family",
+    category: "contacts",
+    detail: "Buyer client · Showing this week",
+  },
+  {
+    id: "search-3",
+    label: "615 Birch Ave",
+    category: "properties",
+    detail: "Active listing · Listed 4 days",
+  },
+  {
+    id: "search-4",
+    label: "Inspection addendum template",
+    category: "templates",
+    detail: "Reusable repair response language",
+  },
+  {
+    id: "search-5",
+    label: "Seller disclosure packet",
+    category: "documents",
+    detail: "Google Drive link · Listing prep",
+  },
+];
+
 export const currentUser = {
   name: "Tim",
   role: "Admin",
+  initials: "T",
 };

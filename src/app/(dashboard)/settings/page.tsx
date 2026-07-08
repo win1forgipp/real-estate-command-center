@@ -1,10 +1,3 @@
-import { PagePlaceholder } from "@/components/dashboard/page-placeholder";
+"use client";
 
-export default function SettingsPage() {
-  return (
-    <PagePlaceholder
-      title="Settings"
-      description="User management, roles, preferences, integrations, and app configuration. This section will be built in a future milestone."
-    />
-  );
-}
+export { default } from "@/components/layout/module-page";

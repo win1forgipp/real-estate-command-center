@@ -1,10 +1,3 @@
-import { PagePlaceholder } from "@/components/dashboard/page-placeholder";
+"use client";
 
-export default function TransactionsPage() {
-  return (
-    <PagePlaceholder
-      title="Transactions"
-      description="Track buyer and seller transactions from contract to closing. This section will be built in a future milestone."
-    />
-  );
-}
+export { default } from "@/components/layout/module-page";
