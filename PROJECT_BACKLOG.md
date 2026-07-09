@@ -118,3 +118,32 @@ Technical requirements:
 
 Status:
 Fixed
+
+## REC-003
+
+Title:
+Centralize app action handling
+
+Priority:
+P0
+
+Category:
+Architecture
+
+Area:
+Global App / Actions
+
+Problem:
+Many buttons still only show coming-soon toasts. Some are expected to open real features, such as New Transaction. Others are correctly unfinished and should show a toast. The current behavior is inconsistent and hard to debug.
+
+Goal:
+Every clickable action in the app must declare an action type and be handled by a central action registry.
+
+Solution:
+- Added `src/lib/app-actions/` with types, registry, handler, audit utility, and `useAppAction` hook.
+- Page headers, empty states, command palette, dashboard actions, and workspace quick actions now resolve through the registry.
+- Implemented actions (e.g. `new_transaction`, `view_deadlines`) route or callback without falling through to placeholder toasts.
+- Placeholder actions show consistent coming-soon feedback from registry definitions.
+
+Status:
+Fixed

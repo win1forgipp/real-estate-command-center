@@ -19,10 +19,6 @@ export function TransactionsPage({ transactions, agents }: TransactionsPageProps
   const searchParams = useSearchParams();
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  const openWizard = useCallback(() => {
-    setWizardOpen(true);
-  }, []);
-
   useEffect(() => {
     if (searchParams.get("new") === "1") {
       setWizardOpen(true);
@@ -45,10 +41,7 @@ export function TransactionsPage({ transactions, agents }: TransactionsPageProps
       <PageHeader
         title="Transactions"
         subtitle="Track buyer and seller deals from contract to closing."
-        primaryAction={{
-          label: "New Transaction",
-          onClick: openWizard,
-        }}
+        primaryAction={{ actionId: "new_transaction" }}
       />
       <TransactionsTable transactions={transactions} />
       <NewTransactionWizard

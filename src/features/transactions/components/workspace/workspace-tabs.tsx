@@ -19,10 +19,12 @@ import { CurrencyDisplay } from "@/components/design-system/displays/currency-di
 import { DateDisplay } from "@/components/design-system/displays/date-display";
 import { EmptyState } from "@/components/design-system/feedback/empty-state";
 import { SectionHeader } from "@/components/design-system/layout/section-header";
+import { getActionLabel } from "@/lib/app-actions";
+import type { AppActionId } from "@/lib/app-actions";
+import { useAppAction } from "@/lib/app-actions/use-app-action";
 import { typography } from "@/lib/design-system/typography";
 import type { TransactionWorkspaceData, WorkspaceTabId } from "@/features/transactions/types";
 import { formatDateValue } from "@/features/transactions/utils/format";
-import { notifyComingSoon } from "@/lib/create-actions";
 import { cn } from "@/lib/utils";
 
 const workspaceTabs: { id: WorkspaceTabId; label: string }[] = [
@@ -40,6 +42,30 @@ const workspaceTabs: { id: WorkspaceTabId; label: string }[] = [
 type WorkspaceTabsProps = {
   workspace: TransactionWorkspaceData;
 };
+
+function WorkspaceActionEmptyState({
+  actionId,
+  icon,
+  title,
+  description,
+}: {
+  actionId: AppActionId;
+  icon: React.ComponentProps<typeof EmptyState>["icon"];
+  title: string;
+  description: string;
+}) {
+  const { getHandler } = useAppAction();
+
+  return (
+    <EmptyState
+      icon={icon}
+      title={title}
+      description={description}
+      actionLabel={getActionLabel(actionId)}
+      onAction={getHandler(actionId)}
+    />
+  );
+}
 
 function OverviewTab({ workspace }: { workspace: TransactionWorkspaceData }) {
   const openTasks = workspace.tasks.filter((task) => !task.completed);
@@ -167,12 +193,11 @@ function OverviewTab({ workspace }: { workspace: TransactionWorkspaceData }) {
 function TasksTab({ workspace }: { workspace: TransactionWorkspaceData }) {
   if (!workspace.tasks.length) {
     return (
-      <EmptyState
+      <WorkspaceActionEmptyState
+        actionId="add_task"
         icon={CheckSquare}
         title="No tasks yet"
         description="Tasks linked to this transaction will appear here."
-        actionLabel="Add Task"
-        onAction={() => notifyComingSoon("Add Task")}
       />
     );
   }
@@ -214,12 +239,11 @@ function TasksTab({ workspace }: { workspace: TransactionWorkspaceData }) {
 function DeadlinesTab({ workspace }: { workspace: TransactionWorkspaceData }) {
   if (!workspace.deadlines.length) {
     return (
-      <EmptyState
+      <WorkspaceActionEmptyState
+        actionId="add_deadline"
         icon={CalendarClock}
         title="No deadlines yet"
         description="Contract deadlines for this transaction will appear here."
-        actionLabel="Add Deadline"
-        onAction={() => notifyComingSoon("Add Deadline")}
       />
     );
   }
@@ -297,12 +321,11 @@ function ContactsTab({ workspace }: { workspace: TransactionWorkspaceData }) {
 function DocumentsTab({ workspace }: { workspace: TransactionWorkspaceData }) {
   if (!workspace.links.length) {
     return (
-      <EmptyState
+      <WorkspaceActionEmptyState
+        actionId="add_link"
         icon={FolderOpen}
         title="No documents yet"
         description="Linked documents and resources for this transaction will appear here."
-        actionLabel="Add Link"
-        onAction={() => notifyComingSoon("Add Link")}
       />
     );
   }
@@ -330,12 +353,11 @@ function DocumentsTab({ workspace }: { workspace: TransactionWorkspaceData }) {
 function NotesTab({ workspace }: { workspace: TransactionWorkspaceData }) {
   if (!workspace.notes.length) {
     return (
-      <EmptyState
+      <WorkspaceActionEmptyState
+        actionId="add_note"
         icon={FileText}
         title="No notes yet"
         description="Transaction notes will appear here."
-        actionLabel="Add Note"
-        onAction={() => notifyComingSoon("Add Note")}
       />
     );
   }

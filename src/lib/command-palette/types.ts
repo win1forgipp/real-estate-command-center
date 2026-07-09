@@ -1,5 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
+import type { AppActionId } from "@/lib/app-actions";
+
 export type CommandPaletteGroupId =
   | "navigation"
   | "actions"
@@ -19,6 +21,7 @@ export type CommandPaletteItem = {
   group: CommandPaletteGroupId;
   icon?: LucideIcon;
   href?: string;
+  actionId?: AppActionId;
   disabled?: boolean;
 };
 

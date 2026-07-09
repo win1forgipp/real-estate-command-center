@@ -1,12 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback } from "react";
-
 import {
   PageHeader as DesignSystemPageHeader,
 } from "@/components/design-system/layout/page-header";
-import { getActionClickHandler } from "@/lib/create-actions";
+import { getActionLabel } from "@/lib/app-actions";
+import { useAppAction } from "@/lib/app-actions/use-app-action";
 import type { PageAction } from "@/lib/page-config";
 
 type PageHeaderProps = {
@@ -17,33 +15,37 @@ type PageHeaderProps = {
   className?: string;
 };
 
+function resolveHeaderAction(
+  action: PageAction,
+  getActionProps: ReturnType<typeof useAppAction>["getActionProps"],
+) {
+  const props = getActionProps(action.actionId);
+
+  return {
+    label: getActionLabel(action.actionId),
+    onClick: props.onClick,
+    disabled: props.disabled,
+  };
+}
+
 export function PageHeader({
   primaryAction,
   secondaryActions,
   ...props
 }: PageHeaderProps) {
-  const router = useRouter();
-  const navigate = useCallback((href: string) => router.push(href), [router]);
+  const { getActionProps } = useAppAction();
 
   return (
     <DesignSystemPageHeader
       {...props}
       primaryAction={
         primaryAction
-          ? {
-              label: primaryAction.label,
-              onClick: getActionClickHandler(
-                primaryAction.label,
-                navigate,
-                primaryAction.onClick,
-              ),
-            }
+          ? resolveHeaderAction(primaryAction, getActionProps)
           : undefined
       }
-      secondaryActions={secondaryActions?.map((action) => ({
-        label: action.label,
-        onClick: getActionClickHandler(action.label, navigate, action.onClick),
-      }))}
+      secondaryActions={secondaryActions?.map((action) =>
+        resolveHeaderAction(action, getActionProps),
+      )}
     />
   );
 }

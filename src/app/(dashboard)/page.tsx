@@ -8,8 +8,8 @@ export default function DashboardPage() {
       <PageHeader
         title="Today at a glance"
         subtitle="A simple overview of what needs attention across transactions, deadlines, tasks, and listings."
-        primaryAction={{ label: "Add Task" }}
-        secondaryActions={[{ label: "View Deadlines", variant: "outline" }]}
+        primaryAction={{ actionId: "add_task" }}
+        secondaryActions={[{ actionId: "view_deadlines", variant: "outline" }]}
       />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">

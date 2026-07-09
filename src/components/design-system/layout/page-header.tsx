@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 export type HeaderAction = {
   label: string;
   onClick?: () => void;
+  disabled?: boolean;
 };
 
 type PageHeaderProps = {
@@ -44,6 +45,7 @@ export function PageHeader({
               type="button"
               className="w-full sm:w-auto"
               onClick={action.onClick}
+              disabled={action.disabled}
             >
               {action.label}
             </SecondaryButton>
@@ -53,6 +55,7 @@ export function PageHeader({
               type="button"
               className="w-full sm:w-auto"
               onClick={primaryAction.onClick}
+              disabled={primaryAction.disabled}
             >
               {primaryAction.label}
             </PrimaryButton>

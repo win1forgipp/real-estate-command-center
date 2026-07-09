@@ -8,10 +8,7 @@ import {
 } from "lucide-react";
 
 import type { CommandPaletteItem } from "@/lib/command-palette/types";
-import {
-  isNewTransactionAction,
-  NEW_TRANSACTION_LAUNCH_PATH,
-} from "@/lib/create-actions";
+import { getPaletteActions } from "@/lib/app-actions";
 import { mockSearchResults } from "@/lib/mock-data";
 import { getAllNavLinks } from "@/lib/navigation";
 import { pageConfigs } from "@/lib/page-config";
@@ -44,6 +41,12 @@ const workspaceCategoryConfig = {
   },
 } as const;
 
+const paletteActionIcons: Partial<Record<string, typeof FileText>> = {
+  new_transaction: FileText,
+  add_buyer: Users,
+  add_showing: MapPin,
+};
+
 function buildNavigationItems(): CommandPaletteItem[] {
   return getAllNavLinks().map((link) => ({
     id: `nav-${link.href}`,
@@ -56,84 +59,48 @@ function buildNavigationItems(): CommandPaletteItem[] {
   }));
 }
 
-function getActionHref(pathname: string, label: string) {
-  if (pathname === "/transactions" && isNewTransactionAction(label)) {
-    return NEW_TRANSACTION_LAUNCH_PATH;
-  }
-
-  return pathname;
-}
-
 function buildActionItems(): CommandPaletteItem[] {
-  const items: CommandPaletteItem[] = [];
-
-  items.push({
-    id: "action-new-transaction",
-    label: "New Transaction",
-    description: "Transactions · Create a new deal",
+  const paletteActions = getPaletteActions();
+  const items: CommandPaletteItem[] = paletteActions.map((action) => ({
+    id: `action-${action.id}`,
+    label: action.label,
+    description: `Quick action · ${action.label}`,
     keywords: [
-      "new transaction",
-      "add transaction",
-      "create transaction",
-      "transaction",
-      "deal",
+      action.label,
+      ...(action.paletteKeywords ?? []),
+      ...(action.aliases ?? []),
+      "create",
+      "add",
+      "new",
+      "action",
     ],
     group: "actions",
-    icon: FileText,
-    href: NEW_TRANSACTION_LAUNCH_PATH,
-  });
+    actionId: action.id,
+    icon: paletteActionIcons[action.id],
+  }));
 
   for (const config of pageConfigs) {
-    if (config.pathname === "/transactions") {
-      continue;
-    }
-
-    items.push({
-      id: `action-${config.pathname}-primary`,
-      label: config.primaryAction.label,
-      description: `${config.title} · Primary action`,
-      keywords: [
-        config.primaryAction.label,
-        config.title,
-        "create",
-        "add",
-        "new",
-      ],
-      group: "actions",
-      href: getActionHref(config.pathname, config.primaryAction.label),
-    });
-
     for (const action of config.secondaryActions ?? []) {
+      const alreadyIncluded = items.some((item) => item.actionId === action.actionId);
+      if (alreadyIncluded) {
+        continue;
+      }
+
+      const definition = paletteActions.find((entry) => entry.id === action.actionId);
+      if (!definition) {
+        continue;
+      }
+
       items.push({
-        id: `action-${config.pathname}-${action.label}`,
-        label: action.label,
+        id: `action-${config.pathname}-${action.actionId}`,
+        label: definition.label,
         description: `${config.title} · Secondary action`,
-        keywords: [action.label, config.title, "action"],
+        keywords: [definition.label, config.title, "action"],
         group: "actions",
-        href: getActionHref(config.pathname, action.label),
+        actionId: action.actionId,
       });
     }
   }
-
-  items.push({
-    id: "action-schedule-showing",
-    label: "Schedule Showing",
-    description: "Showings · Primary action",
-    keywords: ["showing", "schedule", "appointment"],
-    group: "actions",
-    icon: MapPin,
-    href: "/showings",
-  });
-
-  items.push({
-    id: "action-add-buyer",
-    label: "Add Buyer",
-    description: "Buyers · Primary action",
-    keywords: ["buyer", "client", "add"],
-    group: "actions",
-    icon: Users,
-    href: "/buyers",
-  });
 
   return items;
 }

@@ -15,10 +15,8 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { notify } from "@/components/design-system/notifications/toast";
-import {
-  isNewTransactionAction,
-  notifyComingSoon,
-} from "@/lib/create-actions";
+import { executeAppAction } from "@/lib/app-actions";
+import { useAppActionContext } from "@/lib/app-actions/use-app-action";
 import { getCommandPaletteItems } from "@/lib/command-palette/registry";
 import {
   commandPaletteGroups,
@@ -38,11 +36,17 @@ function getSearchValue(item: CommandPaletteItem) {
 export function CommandPalette({ itemMap }: CommandPaletteProps) {
   const router = useRouter();
   const { open, setOpen, recentItems, runCommand } = useCommandPalette();
+  const actionContext = useAppActionContext();
   const items = getCommandPaletteItems();
 
   const handleSelect = useCallback(
     (item: CommandPaletteItem) => {
       runCommand(item);
+
+      if (item.actionId) {
+        executeAppAction(item.actionId, actionContext);
+        return;
+      }
 
       if (item.href) {
         router.push(item.href);
@@ -52,12 +56,10 @@ export function CommandPalette({ itemMap }: CommandPaletteProps) {
             "Workspace view coming soon",
             `${item.label} will open in its dedicated workspace.`,
           );
-        } else if (item.group === "actions" && !isNewTransactionAction(item.label)) {
-          notifyComingSoon(item.label);
         }
       }
     },
-    [router, runCommand],
+    [actionContext, router, runCommand],
   );
 
   const groupedItems = commandPaletteGroups

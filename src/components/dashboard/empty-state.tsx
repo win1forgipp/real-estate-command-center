@@ -1,12 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback } from "react";
-
 import {
   EmptyState as DesignSystemEmptyState,
 } from "@/components/design-system/feedback/empty-state";
-import { getActionClickHandler } from "@/lib/create-actions";
+import { getActionLabel } from "@/lib/app-actions";
+import { useAppAction } from "@/lib/app-actions/use-app-action";
 import type { PageAction } from "@/lib/page-config";
 
 type EmptyStateProps = {
@@ -22,18 +20,14 @@ export function EmptyState({
   primaryAction,
   ...props
 }: EmptyStateProps) {
-  const router = useRouter();
-  const navigate = useCallback((href: string) => router.push(href), [router]);
+  const { getActionProps } = useAppAction();
+  const actionProps = getActionProps(primaryAction.actionId);
 
   return (
     <DesignSystemEmptyState
       {...props}
-      actionLabel={primaryAction.label}
-      onAction={getActionClickHandler(
-        primaryAction.label,
-        navigate,
-        primaryAction.onClick,
-      )}
+      actionLabel={getActionLabel(primaryAction.actionId)}
+      onAction={actionProps.onClick}
     />
   );
 }

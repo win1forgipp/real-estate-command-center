@@ -14,7 +14,8 @@ import { TransactionStatusBadge } from "@/components/design-system/badges/transa
 import { CurrencyDisplay } from "@/components/design-system/displays/currency-display";
 import { DateDisplay } from "@/components/design-system/displays/date-display";
 import { PropertyAddress } from "@/components/design-system/displays/property-address";
-import { notifyComingSoon } from "@/lib/create-actions";
+import { getActionLabel } from "@/lib/app-actions";
+import { useAppAction } from "@/lib/app-actions/use-app-action";
 import { typography } from "@/lib/design-system/typography";
 import type { TransactionWorkspaceData } from "@/features/transactions/types";
 import {
@@ -51,6 +52,7 @@ function QuickActionButton({
 
 export function SummaryPanel({ workspace, className }: SummaryPanelProps) {
   const { transaction, assignedUser } = workspace;
+  const { getHandler } = useAppAction();
 
   return (
     <aside
@@ -146,24 +148,24 @@ export function SummaryPanel({ workspace, className }: SummaryPanelProps) {
       <div className="mt-6 space-y-2">
         <p className={typography.label}>Quick Actions</p>
         <QuickActionButton
-          label="Edit"
+          label={getActionLabel("edit_transaction")}
           icon={Pencil}
-          onClick={() => notifyComingSoon("Edit")}
+          onClick={getHandler("edit_transaction")}
         />
         <QuickActionButton
-          label="Add Task"
+          label={getActionLabel("add_task")}
           icon={Plus}
-          onClick={() => notifyComingSoon("Add Task")}
+          onClick={getHandler("add_task")}
         />
         <QuickActionButton
-          label="Add Note"
+          label={getActionLabel("add_note")}
           icon={FileText}
-          onClick={() => notifyComingSoon("Add Note")}
+          onClick={getHandler("add_note")}
         />
         <QuickActionButton
-          label="Upload Document"
+          label={getActionLabel("upload_document")}
           icon={Upload}
-          onClick={() => notifyComingSoon("Upload Document")}
+          onClick={getHandler("upload_document")}
         />
       </div>
     </aside>
