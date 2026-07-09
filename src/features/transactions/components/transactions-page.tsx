@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 import { PageContainer } from "@/components/design-system/layout/page-container";
-import { PageHeader } from "@/components/design-system/layout/page-header";
+import { PageHeader } from "@/components/layout/page-header";
 import { NewTransactionWizard } from "@/features/transactions/components/new-transaction-wizard/new-transaction-wizard";
 import { TransactionsTable } from "@/features/transactions/components/transactions-table";
 import type { TransactionListItem, UserDto } from "@/features/transactions/types";
@@ -14,7 +15,30 @@ type TransactionsPageProps = {
 };
 
 export function TransactionsPage({ transactions, agents }: TransactionsPageProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [wizardOpen, setWizardOpen] = useState(false);
+
+  const openWizard = useCallback(() => {
+    setWizardOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setWizardOpen(true);
+    }
+  }, [searchParams]);
+
+  const handleWizardOpenChange = useCallback(
+    (open: boolean) => {
+      setWizardOpen(open);
+
+      if (!open && searchParams.get("new") === "1") {
+        router.replace("/transactions");
+      }
+    },
+    [router, searchParams],
+  );
 
   return (
     <PageContainer>
@@ -23,13 +47,13 @@ export function TransactionsPage({ transactions, agents }: TransactionsPageProps
         subtitle="Track buyer and seller deals from contract to closing."
         primaryAction={{
           label: "New Transaction",
-          onClick: () => setWizardOpen(true),
+          onClick: openWizard,
         }}
       />
       <TransactionsTable transactions={transactions} />
       <NewTransactionWizard
         open={wizardOpen}
-        onOpenChange={setWizardOpen}
+        onOpenChange={handleWizardOpenChange}
         agents={agents}
       />
     </PageContainer>

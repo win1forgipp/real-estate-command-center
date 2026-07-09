@@ -8,8 +8,14 @@ const NAVIGATION_ACTIONS: Record<string, string> = {
   "View Deadlines": "/deadlines",
 };
 
+export const NEW_TRANSACTION_LAUNCH_PATH = "/transactions?new=1";
+
 export function normalizeActionLabel(label: string): string {
   return ACTION_LABEL_ALIASES[label] ?? label;
+}
+
+export function isNewTransactionAction(label: string): boolean {
+  return normalizeActionLabel(label) === "New Transaction";
 }
 
 export function getComingSoonMessage(label: string): string {
@@ -29,6 +35,10 @@ export function getActionClickHandler(
 ): () => void {
   if (override) {
     return override;
+  }
+
+  if (isNewTransactionAction(label) && navigate) {
+    return () => navigate(NEW_TRANSACTION_LAUNCH_PATH);
   }
 
   const destination = NAVIGATION_ACTIONS[label];

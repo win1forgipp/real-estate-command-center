@@ -8,6 +8,10 @@ import {
 } from "lucide-react";
 
 import type { CommandPaletteItem } from "@/lib/command-palette/types";
+import {
+  isNewTransactionAction,
+  NEW_TRANSACTION_LAUNCH_PATH,
+} from "@/lib/create-actions";
 import { mockSearchResults } from "@/lib/mock-data";
 import { getAllNavLinks } from "@/lib/navigation";
 import { pageConfigs } from "@/lib/page-config";
@@ -52,10 +56,38 @@ function buildNavigationItems(): CommandPaletteItem[] {
   }));
 }
 
+function getActionHref(pathname: string, label: string) {
+  if (pathname === "/transactions" && isNewTransactionAction(label)) {
+    return NEW_TRANSACTION_LAUNCH_PATH;
+  }
+
+  return pathname;
+}
+
 function buildActionItems(): CommandPaletteItem[] {
   const items: CommandPaletteItem[] = [];
 
+  items.push({
+    id: "action-new-transaction",
+    label: "New Transaction",
+    description: "Transactions · Create a new deal",
+    keywords: [
+      "new transaction",
+      "add transaction",
+      "create transaction",
+      "transaction",
+      "deal",
+    ],
+    group: "actions",
+    icon: FileText,
+    href: NEW_TRANSACTION_LAUNCH_PATH,
+  });
+
   for (const config of pageConfigs) {
+    if (config.pathname === "/transactions") {
+      continue;
+    }
+
     items.push({
       id: `action-${config.pathname}-primary`,
       label: config.primaryAction.label,
@@ -68,7 +100,7 @@ function buildActionItems(): CommandPaletteItem[] {
         "new",
       ],
       group: "actions",
-      href: config.pathname,
+      href: getActionHref(config.pathname, config.primaryAction.label),
     });
 
     for (const action of config.secondaryActions ?? []) {
@@ -78,7 +110,7 @@ function buildActionItems(): CommandPaletteItem[] {
         description: `${config.title} · Secondary action`,
         keywords: [action.label, config.title, "action"],
         group: "actions",
-        href: config.pathname,
+        href: getActionHref(config.pathname, action.label),
       });
     }
   }

@@ -39,14 +39,14 @@ export const pageConfigs: PageConfig[] = [
     pathname: "/transactions",
     title: "Transactions",
     subtitle: "Track buyer and seller deals from contract to closing.",
-    primaryAction: { label: "Add Transaction" },
+    primaryAction: { label: "New Transaction" },
     secondaryActions: [{ label: "Import Deal", variant: "outline" }],
     emptyState: {
       icon: FileText,
       title: "No transactions yet",
       description:
         "Start by adding a buyer or seller transaction to track deadlines, documents, and closing progress in one place.",
-      primaryAction: { label: "Add Transaction" },
+      primaryAction: { label: "New Transaction" },
       helpText: "You can link contacts, tasks, and commission details later.",
     },
   },
