@@ -599,3 +599,49 @@ Next milestone:
 - Add navigation structure
 - Use mock data only
 - Do not connect Turso yet
+
+## 17. Future Milestone: Document Intake + AI Extraction
+
+**Status: Planned — do not implement yet.**
+
+This future milestone will allow users to upload or scan real estate documents, especially purchase agreements, and have AI extract important transaction data into the command center.
+
+### Intended Capabilities
+
+- PDF upload
+- Mobile upload
+- Mobile camera scan support
+- Attach documents to transactions, contacts, properties, and workspaces
+- AI extraction of key fields
+- User review before saving extracted data
+- Manual edits after saving
+- Original document preserved and linked
+- Extracted data should populate transaction fields, deadlines, contacts, notes, and checklist items where appropriate
+- Changes should create activity timeline events
+
+### Key Fields to Extract
+
+- Property address
+- Buyer names
+- Seller names
+- Purchase price
+- Contract date
+- Closing date
+- Inspection period
+- Financing deadline
+- Appraisal deadline
+- Earnest money amount
+- Earnest money due date
+- Title or closing company
+- Lender
+- Agents
+- Contingency dates
+- Special terms
+- Commission details if available
+
+### Implementation Notes
+
+- This milestone should plug into Transaction Workspaces and the Global Activity Timeline architecture.
+- Extraction must always require user confirmation before writing to the database.
+- The source document must remain linked to the transaction record after extraction.
+- Build only after core workspace, document storage, and activity timeline foundations are in place.
