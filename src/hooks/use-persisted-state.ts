@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_PREFIX = "rec-app-state";
+const EMPTY_RECORD: Record<string, boolean> = {};
 
 function readStorage<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") {
@@ -25,17 +26,14 @@ function writeStorage<T>(key: string, value: T) {
   window.localStorage.setItem(`${STORAGE_PREFIX}:${key}`, JSON.stringify(value));
 }
 
-export function usePersistedRecord(
-  key: string,
-  initialValue: Record<string, boolean> = {},
-) {
-  const [value, setValue] = useState<Record<string, boolean>>(initialValue);
+export function usePersistedRecord(key: string) {
+  const [value, setValue] = useState<Record<string, boolean>>(EMPTY_RECORD);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setValue(readStorage(key, initialValue));
+    setValue(readStorage(key, EMPTY_RECORD));
     setHydrated(true);
-  }, [key, initialValue]);
+  }, [key]);
 
   const setRecord = useCallback(
     (updater: (current: Record<string, boolean>) => Record<string, boolean>) => {

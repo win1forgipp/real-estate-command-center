@@ -12,7 +12,6 @@ export function useNavGroupsState() {
   const pathname = usePathname();
   const { value: expandedGroups, setRecord, hydrated } = usePersistedRecord(
     NAV_GROUPS_STORAGE_KEY,
-    {},
   );
 
   const isExpanded = useCallback(

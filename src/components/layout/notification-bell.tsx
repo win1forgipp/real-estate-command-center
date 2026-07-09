@@ -2,7 +2,7 @@
 
 import { Bell } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { mockNotifications } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 export function NotificationBell() {
   const unreadCount = mockNotifications.filter(
@@ -19,21 +20,19 @@ export function NotificationBell() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon-lg"
-          className="relative"
-          aria-label="Notifications"
-        >
-          <Bell className="size-5" />
-          {unreadCount ? (
-            <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-              {unreadCount}
-            </span>
-          ) : null}
-        </Button>
+      <DropdownMenuTrigger
+        aria-label="Notifications"
+        className={cn(
+          buttonVariants({ variant: "outline", size: "icon-lg" }),
+          "relative",
+        )}
+      >
+        <Bell className="size-5" />
+        {unreadCount ? (
+          <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+            {unreadCount}
+          </span>
+        ) : null}
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-80">

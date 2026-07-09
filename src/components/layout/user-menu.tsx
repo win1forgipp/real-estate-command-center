@@ -2,7 +2,7 @@
 
 import { ChevronDown, CircleHelp, LogOut, Settings2, UserRound } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,30 +12,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { currentUser } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 export function UserMenu() {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
-        <Button
-          type="button"
-          variant="outline"
-          className="min-h-11 gap-2 px-3"
-          aria-label="Open user menu"
-        >
-          <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-            {currentUser.initials}
+      <DropdownMenuTrigger
+        aria-label="Open user menu"
+        className={cn(buttonVariants({ variant: "outline" }), "min-h-11 gap-2 px-3")}
+      >
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+          {currentUser.initials}
+        </span>
+        <span className="hidden text-left sm:block">
+          <span className="block text-sm font-medium text-foreground">
+            {currentUser.name}
           </span>
-          <span className="hidden text-left sm:block">
-            <span className="block text-sm font-medium text-foreground">
-              {currentUser.name}
-            </span>
-            <span className="block text-xs text-muted-foreground">
-              {currentUser.role}
-            </span>
+          <span className="block text-xs text-muted-foreground">
+            {currentUser.role}
           </span>
-          <ChevronDown className="hidden size-4 text-muted-foreground sm:block" />
-        </Button>
+        </span>
+        <ChevronDown className="hidden size-4 text-muted-foreground sm:block" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56">
