@@ -73,6 +73,7 @@ async function seed() {
       contractDate: new Date("2026-02-15"),
       earnestMoneyAmount: 5000,
       earnestMoneyReceived: true,
+      earnestMoneyHeldBy: "sellers_brokerage",
       transactionStatus: "under_contract",
       listingSide: false,
       sellingSide: true,

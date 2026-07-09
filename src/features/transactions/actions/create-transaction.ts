@@ -14,6 +14,7 @@ export async function createTransactionAction(
   const validated = createTransactionInputSchema.parse(input);
   const result = await createTransaction(validated);
 
+  revalidatePath("/");
   revalidatePath("/transactions");
   revalidatePath(`/transactions/${result.id}`);
 

@@ -11,7 +11,9 @@ import { RadioInput } from "@/components/design-system/forms/radio-input";
 import { TextInput } from "@/components/design-system/forms/text-input";
 import { typography } from "@/lib/design-system/typography";
 import {
+  getEarnestMoneyHeldByLabel,
   getTransactionTypeLabel,
+  earnestMoneyHeldByOptions,
   manualWizardStepFields,
   parseCurrencyValue,
   transactionTypeOptions,
@@ -167,6 +169,8 @@ export function WizardManualForm({ step, form, agents }: WizardManualFormProps) 
   }
 
   if (step === 4) {
+    const heldBy = watch("earnestMoneyHeldBy");
+
     return (
       <div className="space-y-4">
         <Controller
@@ -205,6 +209,28 @@ export function WizardManualForm({ step, form, agents }: WizardManualFormProps) 
             />
           )}
         />
+        <Controller
+          name="earnestMoneyHeldBy"
+          control={control}
+          render={({ field }) => (
+            <DropdownInput
+              label="Earnest Money Held By"
+              value={field.value}
+              onValueChange={field.onChange}
+              placeholder="Select holder"
+              description="Optional"
+              options={[...earnestMoneyHeldByOptions]}
+            />
+          )}
+        />
+        {heldBy === "other" ? (
+          <TextInput
+            label="Holder Name"
+            {...register("earnestMoneyHolderName")}
+            error={errors.earnestMoneyHolderName?.message}
+            placeholder="Enter holder name"
+          />
+        ) : null}
       </div>
     );
   }
@@ -263,6 +289,16 @@ export function WizardManualForm({ step, form, agents }: WizardManualFormProps) 
           earnestMoney != null ? <CurrencyDisplay amount={earnestMoney} /> : "—"
         }
       />
+      <ReviewRow
+        label="Earnest Money Held By"
+        value={getEarnestMoneyHeldByLabel(values.earnestMoneyHeldBy)}
+      />
+      {values.earnestMoneyHeldBy === "other" ? (
+        <ReviewRow
+          label="Holder Name"
+          value={values.earnestMoneyHolderName?.trim() || "—"}
+        />
+      ) : null}
     </dl>
   );
 }

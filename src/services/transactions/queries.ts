@@ -32,6 +32,7 @@ import {
   mapTransactionToProgress,
 } from "@/features/transactions/utils/progress-mapper";
 import type { TransactionStatus } from "@/components/design-system/badges/transaction-status-badge";
+import { activeTransactionsFilter } from "@/services/transactions/filters";
 
 function toTransactionDto(
   transaction: typeof transactions.$inferSelect,
@@ -47,6 +48,8 @@ function toTransactionDto(
     closingDate: transaction.closingDate,
     contractDate: transaction.contractDate,
     earnestMoneyReceived: transaction.earnestMoneyReceived,
+    earnestMoneyHeldBy: transaction.earnestMoneyHeldBy,
+    earnestMoneyHolderName: transaction.earnestMoneyHolderName,
     transactionStatus: transaction.transactionStatus as TransactionStatus,
     commissionExpected: transaction.commissionExpected,
     commissionReceived: transaction.commissionReceived,
@@ -134,6 +137,7 @@ export async function getTransactionsList(): Promise<TransactionListItem[]> {
         assignedUser: users,
       })
       .from(transactions)
+      .where(activeTransactionsFilter())
       .leftJoin(users, eq(transactions.assignedUserId, users.id))
       .orderBy(desc(transactions.updatedAt)),
     db

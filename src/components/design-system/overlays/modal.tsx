@@ -1,10 +1,10 @@
 "use client";
 
+import { OverlayFooter } from "@/components/design-system/overlays/overlay-footer";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -34,7 +34,7 @@ export function Modal({
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
         {children ? <div>{children}</div> : null}
-        {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+        {footer ? <OverlayFooter>{footer}</OverlayFooter> : null}
       </DialogContent>
     </Dialog>
   );

@@ -35,10 +35,9 @@ function TrendIndicator({
   );
 }
 
-function DashboardCardContent({ data }: { data: DashboardCardData }) {
+function DashboardCardHeader({ data }: { data: DashboardCardData }) {
   const Icon = dashboardCardIcons[data.icon];
-
-  return (
+  const headerContent = (
     <>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -65,68 +64,106 @@ function DashboardCardContent({ data }: { data: DashboardCardData }) {
         </p>
         {data.trend ? <TrendIndicator trend={data.trend} /> : null}
       </div>
+    </>
+  );
 
-      {data.items?.length ? (
-        <ul className="mt-auto space-y-3 border-t border-border/60 pt-4">
-          {data.items.map((item) => (
-            <li
-              key={`${data.id}-${item.label}`}
-              className="flex items-start justify-between gap-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {item.label}
+  if (data.href) {
+    return (
+      <Link
+        href={data.href}
+        className="-mx-2 -mt-2 block rounded-xl p-2 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        {headerContent}
+      </Link>
+    );
+  }
+
+  return headerContent;
+}
+
+function DashboardCardItems({ data }: { data: DashboardCardData }) {
+  if (!data.items?.length) {
+    return (
+      <p className="mt-auto border-t border-border/60 pt-4 text-sm text-muted-foreground">
+        No items yet.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="mt-auto space-y-3 border-t border-border/60 pt-4">
+      {data.items.map((item) => {
+        const itemContent = (
+          <>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {item.label}
+              </p>
+              {item.detail ? (
+                <p className="truncate text-sm text-muted-foreground">
+                  {item.detail}
                 </p>
-                {item.detail ? (
-                  <p className="truncate text-sm text-muted-foreground">
-                    {item.detail}
-                  </p>
-                ) : null}
-              </div>
-              {item.statusLabel ? (
-                <StatusBadge
-                  label={item.statusLabel}
-                  variant={item.status}
-                  className="shrink-0"
-                />
               ) : null}
+            </div>
+            {item.statusLabel ? (
+              <StatusBadge
+                label={item.statusLabel}
+                variant={item.status}
+                className="shrink-0"
+              />
+            ) : null}
+          </>
+        );
+
+        if (item.href) {
+          return (
+            <li key={`${data.id}-${item.label}`}>
+              <Link
+                href={item.href}
+                className="flex items-start justify-between gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {itemContent}
+              </Link>
             </li>
-          ))}
-        </ul>
-      ) : null}
+          );
+        }
+
+        return (
+          <li
+            key={`${data.id}-${item.label}`}
+            className="flex items-start justify-between gap-3 px-2 py-1.5"
+          >
+            {itemContent}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function DashboardCard({ data, className }: DashboardCardProps) {
+  return (
+    <section
+      className={cn(
+        "group flex h-full flex-col rounded-2xl border border-border/70 bg-card p-5 shadow-sm",
+        className,
+      )}
+    >
+      <DashboardCardHeader data={data} />
+      <DashboardCardItems data={data} />
 
       {data.href ? (
-        <div className="mt-4 flex items-center gap-1 text-sm font-medium text-primary">
+        <Link
+          href={data.href}
+          className="mt-4 flex items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
           View details
           <ArrowRight
             className="size-4 transition-transform group-hover:translate-x-0.5"
             aria-hidden="true"
           />
-        </div>
+        </Link>
       ) : null}
-    </>
-  );
-}
-
-export function DashboardCard({ data, className }: DashboardCardProps) {
-  const cardClassName = cn(
-    "group flex h-full flex-col rounded-2xl border border-border/70 bg-card p-5 shadow-sm transition-colors",
-    data.href &&
-      "hover:border-primary/30 hover:bg-card/95 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-    className,
-  );
-
-  if (data.href) {
-    return (
-      <Link href={data.href} className={cardClassName}>
-        <DashboardCardContent data={data} />
-      </Link>
-    );
-  }
-
-  return (
-    <section className={cardClassName}>
-      <DashboardCardContent data={data} />
     </section>
   );
 }

@@ -1,8 +1,10 @@
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { PageHeader } from "@/components/layout/page-header";
-import { dashboardOverviewCards } from "@/lib/mock-data";
+import { getDashboardOverviewCards } from "@/services/dashboard/queries";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const dashboardOverviewCards = await getDashboardOverviewCards();
+
   return (
     <div className="space-y-6">
       <PageHeader

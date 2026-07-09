@@ -12,6 +12,8 @@ export type TransactionDto = {
   closingDate: Date | null;
   contractDate: Date | null;
   earnestMoneyReceived: boolean;
+  earnestMoneyHeldBy: "sellers_brokerage" | "buyers_brokerage" | "other" | null;
+  earnestMoneyHolderName: string | null;
   transactionStatus: TransactionStatus;
   commissionExpected: number | null;
   commissionReceived: number | null;

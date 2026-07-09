@@ -69,6 +69,10 @@ export const transactions = sqliteTable(
     })
       .notNull()
       .default(false),
+    earnestMoneyHeldBy: text("earnest_money_held_by", {
+      enum: ["sellers_brokerage", "buyers_brokerage", "other"],
+    }),
+    earnestMoneyHolderName: text("earnest_money_holder_name"),
     transactionStatus: text("transaction_status", {
       enum: [
         "prospect",

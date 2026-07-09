@@ -180,6 +180,37 @@ Implementation:
 Status:
 Fixed
 
+## REC-005
+
+Title:
+Fix action tiles, modal button spacing, EMD holder, progress hover, and dashboard counts
+
+Priority:
+P1
+
+Category:
+Bug + UX Fix
+
+Area:
+Dashboard / Actions / Transaction Wizard / Transaction Workspace
+
+Issues:
+1. Dashboard tiles used mock data and inconsistent click behavior.
+2. Modal footer buttons sat flush with the bottom edge.
+3. New Transaction wizard lacked Earnest Money Held By fields.
+4. Progress tracker showed duplicate native tooltips on hover.
+5. Dashboard Active Transactions count did not match live Turso data.
+
+Implementation:
+- Added live Turso dashboard queries and per-item navigation links.
+- Aligned Active Transactions count with the transactions list (excludes closed/cancelled).
+- Introduced shared `OverlayFooter` and fixed `DialogFooter` spacing globally.
+- Added `earnest_money_held_by` and `earnest_money_holder_name` schema migration and wizard fields.
+- Removed native `title` tooltip from progress tracker stages.
+
+Status:
+Fixed
+
 ## Button Functionality Audit
 
 Definition: A button is **Functional** only if it performs the real expected workflow (opens the correct form/wizard/modal or navigates to a working page). A **Placeholder** intentionally shows coming-soon feedback for an unbuilt feature. **Broken** means the button should work now but only shows a placeholder or does nothing.

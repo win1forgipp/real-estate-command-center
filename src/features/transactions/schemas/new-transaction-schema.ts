@@ -6,25 +6,48 @@ export const transactionTypeOptions = [
   { label: "Dual Agency", value: "dual" },
 ] as const;
 
-export const newTransactionFormSchema = z.object({
-  transactionType: z.enum(["buyer", "seller", "dual"], {
-    message: "Select a transaction type",
-  }),
-  propertyAddress: z.string().min(1, "Property address is required"),
-  city: z.string().min(1, "City is required"),
-  state: z
-    .string()
-    .min(2, "State is required")
-    .max(2, "Use a 2-letter state code"),
-  zip: z.string().min(5, "ZIP code is required"),
-  buyerNames: z.string().optional(),
-  sellerNames: z.string().optional(),
-  assignedUserId: z.string().min(1, "Assigned agent is required"),
-  purchasePrice: z.string().optional(),
-  contractDate: z.string().optional(),
-  closingDate: z.string().optional(),
-  earnestMoneyAmount: z.string().optional(),
-});
+export const earnestMoneyHeldByOptions = [
+  { label: "Seller's Brokerage", value: "sellers_brokerage" },
+  { label: "Buyer's Brokerage", value: "buyers_brokerage" },
+  { label: "Other", value: "other" },
+] as const;
+
+export const newTransactionFormSchema = z
+  .object({
+    transactionType: z.enum(["buyer", "seller", "dual"], {
+      message: "Select a transaction type",
+    }),
+    propertyAddress: z.string().min(1, "Property address is required"),
+    city: z.string().min(1, "City is required"),
+    state: z
+      .string()
+      .min(2, "State is required")
+      .max(2, "Use a 2-letter state code"),
+    zip: z.string().min(5, "ZIP code is required"),
+    buyerNames: z.string().optional(),
+    sellerNames: z.string().optional(),
+    assignedUserId: z.string().min(1, "Assigned agent is required"),
+    purchasePrice: z.string().optional(),
+    contractDate: z.string().optional(),
+    closingDate: z.string().optional(),
+    earnestMoneyAmount: z.string().optional(),
+    earnestMoneyHeldBy: z
+      .enum(["sellers_brokerage", "buyers_brokerage", "other"])
+      .optional(),
+    earnestMoneyHolderName: z.string().optional(),
+  })
+  .superRefine((values, context) => {
+    if (
+      values.earnestMoneyHeldBy === "other" &&
+      !values.earnestMoneyHolderName?.trim()
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Holder name is required when Other is selected",
+        path: ["earnestMoneyHolderName"],
+      });
+    }
+  });
 
 export type NewTransactionFormValues = z.infer<typeof newTransactionFormSchema>;
 
@@ -38,20 +61,37 @@ export const manualWizardStepFields: Record<
   4: [],
 };
 
-export const createTransactionInputSchema = z.object({
-  transactionType: z.enum(["buyer", "seller", "dual"]),
-  propertyAddress: z.string().min(1),
-  city: z.string().min(1),
-  state: z.string().length(2),
-  zip: z.string().min(5),
-  buyerNames: z.string().optional(),
-  sellerNames: z.string().optional(),
-  assignedUserId: z.string().min(1),
-  purchasePrice: z.number().positive().optional(),
-  contractDate: z.string().optional(),
-  closingDate: z.string().optional(),
-  earnestMoneyAmount: z.number().nonnegative().optional(),
-});
+export const createTransactionInputSchema = z
+  .object({
+    transactionType: z.enum(["buyer", "seller", "dual"]),
+    propertyAddress: z.string().min(1),
+    city: z.string().min(1),
+    state: z.string().length(2),
+    zip: z.string().min(5),
+    buyerNames: z.string().optional(),
+    sellerNames: z.string().optional(),
+    assignedUserId: z.string().min(1),
+    purchasePrice: z.number().positive().optional(),
+    contractDate: z.string().optional(),
+    closingDate: z.string().optional(),
+    earnestMoneyAmount: z.number().nonnegative().optional(),
+    earnestMoneyHeldBy: z
+      .enum(["sellers_brokerage", "buyers_brokerage", "other"])
+      .optional(),
+    earnestMoneyHolderName: z.string().optional(),
+  })
+  .superRefine((values, context) => {
+    if (
+      values.earnestMoneyHeldBy === "other" &&
+      !values.earnestMoneyHolderName?.trim()
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Holder name is required when Other is selected",
+        path: ["earnestMoneyHolderName"],
+      });
+    }
+  });
 
 export type CreateTransactionInput = z.infer<typeof createTransactionInputSchema>;
 
@@ -80,11 +120,26 @@ export function formValuesToCreateInput(
     contractDate: values.contractDate || undefined,
     closingDate: values.closingDate || undefined,
     earnestMoneyAmount: parseCurrencyValue(values.earnestMoneyAmount),
+    earnestMoneyHeldBy: values.earnestMoneyHeldBy,
+    earnestMoneyHolderName: values.earnestMoneyHolderName?.trim() || undefined,
   });
 }
 
 export function getTransactionTypeLabel(value: NewTransactionFormValues["transactionType"]) {
   return (
     transactionTypeOptions.find((option) => option.value === value)?.label ?? value
+  );
+}
+
+export function getEarnestMoneyHeldByLabel(
+  value: NewTransactionFormValues["earnestMoneyHeldBy"],
+) {
+  if (!value) {
+    return "—";
+  }
+
+  return (
+    earnestMoneyHeldByOptions.find((option) => option.value === value)?.label ??
+    value
   );
 }

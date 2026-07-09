@@ -4,11 +4,11 @@ import {
   PrimaryButton,
   SecondaryButton,
 } from "@/components/design-system/buttons/action-buttons";
+import { OverlayFooter } from "@/components/design-system/overlays/overlay-footer";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -38,11 +38,7 @@ export function ActionFormModal({
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-5 py-5">{children}</div>
-        {footer ? (
-          <DialogFooter className="border-t border-border/70 bg-muted/30 px-5 py-4">
-            {footer}
-          </DialogFooter>
-        ) : null}
+        {footer ? <OverlayFooter>{footer}</OverlayFooter> : null}
       </DialogContent>
     </Dialog>
   );

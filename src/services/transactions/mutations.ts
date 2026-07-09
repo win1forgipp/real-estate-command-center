@@ -47,6 +47,8 @@ export async function createTransaction(
       contractDate: input.contractDate ? new Date(input.contractDate) : null,
       earnestMoneyAmount: input.earnestMoneyAmount ?? null,
       earnestMoneyReceived: false,
+      earnestMoneyHeldBy: input.earnestMoneyHeldBy ?? null,
+      earnestMoneyHolderName: input.earnestMoneyHolderName ?? null,
       transactionStatus,
       listingSide,
       sellingSide,

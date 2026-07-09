@@ -10,11 +10,11 @@ import {
 } from "@/components/design-system/buttons/action-buttons";
 import { StatusBadge } from "@/components/design-system/badges/status-badge";
 import { notify } from "@/components/design-system/notifications/toast";
+import { OverlayFooter } from "@/components/design-system/overlays/overlay-footer";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -58,6 +58,8 @@ function getDefaultValues(agents: UserDto[]): NewTransactionFormValues {
     contractDate: "",
     closingDate: "",
     earnestMoneyAmount: "",
+    earnestMoneyHeldBy: undefined,
+    earnestMoneyHolderName: "",
   };
 }
 
@@ -243,7 +245,7 @@ export function NewTransactionWizard({
         </div>
 
         {screen === "manual" ? (
-          <DialogFooter className="border-t border-border/70 bg-muted/30 px-5 py-4 sm:justify-between">
+          <OverlayFooter className="sm:justify-between">
             <SecondaryButton
               type="button"
               className="w-full sm:w-auto"
@@ -272,9 +274,9 @@ export function NewTransactionWizard({
                 </PrimaryButton>
               )}
             </div>
-          </DialogFooter>
+          </OverlayFooter>
         ) : showBackButton ? (
-          <DialogFooter className="border-t border-border/70 bg-muted/30 px-5 py-4">
+          <OverlayFooter>
             <SecondaryButton
               type="button"
               className="w-full sm:w-auto"
@@ -282,7 +284,7 @@ export function NewTransactionWizard({
             >
               Back
             </SecondaryButton>
-          </DialogFooter>
+          </OverlayFooter>
         ) : null}
       </DialogContent>
     </Dialog>
