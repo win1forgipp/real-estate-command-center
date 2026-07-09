@@ -15,6 +15,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { notify } from "@/components/design-system/notifications/toast";
+import { notifyComingSoon } from "@/lib/create-actions";
 import { getCommandPaletteItems } from "@/lib/command-palette/registry";
 import {
   commandPaletteGroups,
@@ -48,6 +49,8 @@ export function CommandPalette({ itemMap }: CommandPaletteProps) {
             "Workspace view coming soon",
             `${item.label} will open in its dedicated workspace.`,
           );
+        } else if (item.group === "actions") {
+          notifyComingSoon(item.label);
         }
       }
     },

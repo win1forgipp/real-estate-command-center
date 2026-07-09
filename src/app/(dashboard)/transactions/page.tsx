@@ -1,5 +1,3 @@
-import { notFound } from "next/navigation";
-
 import { TransactionsPage } from "@/features/transactions/components/transactions-page";
 import { getTransactionsList } from "@/services/transactions/queries";
 

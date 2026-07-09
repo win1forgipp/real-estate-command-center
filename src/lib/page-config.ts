@@ -16,6 +16,7 @@ import {
 export type PageAction = {
   label: string;
   variant?: "default" | "outline" | "secondary";
+  onClick?: () => void;
 };
 
 export type PageConfig = {

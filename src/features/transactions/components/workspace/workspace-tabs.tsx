@@ -22,6 +22,7 @@ import { SectionHeader } from "@/components/design-system/layout/section-header"
 import { typography } from "@/lib/design-system/typography";
 import type { TransactionWorkspaceData, WorkspaceTabId } from "@/features/transactions/types";
 import { formatDateValue } from "@/features/transactions/utils/format";
+import { notifyComingSoon } from "@/lib/create-actions";
 import { cn } from "@/lib/utils";
 
 const workspaceTabs: { id: WorkspaceTabId; label: string }[] = [
@@ -171,6 +172,7 @@ function TasksTab({ workspace }: { workspace: TransactionWorkspaceData }) {
         title="No tasks yet"
         description="Tasks linked to this transaction will appear here."
         actionLabel="Add Task"
+        onAction={() => notifyComingSoon("Add Task")}
       />
     );
   }
@@ -217,6 +219,7 @@ function DeadlinesTab({ workspace }: { workspace: TransactionWorkspaceData }) {
         title="No deadlines yet"
         description="Contract deadlines for this transaction will appear here."
         actionLabel="Add Deadline"
+        onAction={() => notifyComingSoon("Add Deadline")}
       />
     );
   }
@@ -299,6 +302,7 @@ function DocumentsTab({ workspace }: { workspace: TransactionWorkspaceData }) {
         title="No documents yet"
         description="Linked documents and resources for this transaction will appear here."
         actionLabel="Add Link"
+        onAction={() => notifyComingSoon("Add Link")}
       />
     );
   }
@@ -331,6 +335,7 @@ function NotesTab({ workspace }: { workspace: TransactionWorkspaceData }) {
         title="No notes yet"
         description="Transaction notes will appear here."
         actionLabel="Add Note"
+        onAction={() => notifyComingSoon("Add Note")}
       />
     );
   }

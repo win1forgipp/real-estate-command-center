@@ -14,7 +14,7 @@ import { TransactionStatusBadge } from "@/components/design-system/badges/transa
 import { CurrencyDisplay } from "@/components/design-system/displays/currency-display";
 import { DateDisplay } from "@/components/design-system/displays/date-display";
 import { PropertyAddress } from "@/components/design-system/displays/property-address";
-import { notify } from "@/components/design-system/notifications/toast";
+import { notifyComingSoon } from "@/lib/create-actions";
 import { typography } from "@/lib/design-system/typography";
 import type { TransactionWorkspaceData } from "@/features/transactions/types";
 import {
@@ -51,8 +51,6 @@ function QuickActionButton({
 
 export function SummaryPanel({ workspace, className }: SummaryPanelProps) {
   const { transaction, assignedUser } = workspace;
-  const comingSoon = (feature: string) =>
-    notify.info("Coming soon", `${feature} will be added in a future milestone.`);
 
   return (
     <aside
@@ -150,22 +148,22 @@ export function SummaryPanel({ workspace, className }: SummaryPanelProps) {
         <QuickActionButton
           label="Edit"
           icon={Pencil}
-          onClick={() => comingSoon("Transaction editing")}
+          onClick={() => notifyComingSoon("Edit")}
         />
         <QuickActionButton
           label="Add Task"
           icon={Plus}
-          onClick={() => comingSoon("Task creation")}
+          onClick={() => notifyComingSoon("Add Task")}
         />
         <QuickActionButton
           label="Add Note"
           icon={FileText}
-          onClick={() => comingSoon("Note creation")}
+          onClick={() => notifyComingSoon("Add Note")}
         />
         <QuickActionButton
           label="Upload Document"
           icon={Upload}
-          onClick={() => comingSoon("Document upload")}
+          onClick={() => notifyComingSoon("Upload Document")}
         />
       </div>
     </aside>

@@ -2,7 +2,7 @@
 
 import { PageContainer } from "@/components/design-system/layout/page-container";
 import { PageHeader } from "@/components/design-system/layout/page-header";
-import { notify } from "@/components/design-system/notifications/toast";
+import { getActionClickHandler } from "@/lib/create-actions";
 import { TransactionsTable } from "@/features/transactions/components/transactions-table";
 import type { TransactionListItem } from "@/features/transactions/types";
 
@@ -18,11 +18,7 @@ export function TransactionsPage({ transactions }: TransactionsPageProps) {
         subtitle="Track buyer and seller deals from contract to closing."
         primaryAction={{
           label: "New Transaction",
-          onClick: () =>
-            notify.info(
-              "Coming soon",
-              "New transaction creation will be added in a future milestone.",
-            ),
+          onClick: getActionClickHandler("New Transaction"),
         }}
       />
       <TransactionsTable transactions={transactions} />
