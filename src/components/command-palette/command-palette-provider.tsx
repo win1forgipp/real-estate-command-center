@@ -80,7 +80,7 @@ export function CommandPaletteProvider({
   return (
     <CommandPaletteContext.Provider value={value}>
       {children}
-      <CommandPalette itemMap={itemMap} />
+      {open ? <CommandPalette itemMap={itemMap} /> : null}
     </CommandPaletteContext.Provider>
   );
 }
