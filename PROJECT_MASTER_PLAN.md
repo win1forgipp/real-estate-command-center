@@ -56,7 +56,233 @@ Visual style:
 - clear headings
 - obvious quick actions
 
-## 4. Tech Stack
+## 4. Core Design Principle: Workspaces
+
+The Real Estate Command Center is built around Workspaces, not individual records.
+
+A Transaction is more than a database entry—it is the operational workspace where all activity related to that transaction takes place.
+
+Whenever possible, users should complete work from within a single workspace rather than navigating between multiple modules.
+
+Each Transaction Workspace will eventually include:
+
+### Overview
+- Transaction status
+- Progress timeline
+- Quick actions
+- Property summary
+- Buyer/Seller summary
+
+### Contacts
+- Buyers
+- Sellers
+- Agents
+- Lender
+- Attorney
+- Inspector
+- Contractor
+- Title company
+
+### Deadlines
+- Inspection
+- Financing
+- Appraisal
+- Earnest Money
+- Closing
+- Walkthrough
+- Custom milestones
+
+### Task Checklist
+- Automatically generated based on transaction type
+- User-created tasks
+- Completed tasks
+- Overdue tasks
+
+### Documents
+- Purchase agreement
+- Addenda
+- Inspections
+- Repair documents
+- Closing documents
+- Google Drive links
+- Dotloop links
+- MLS links
+
+### Notes
+- Transaction notes
+- Phone call log
+- Meeting notes
+- AI summaries
+
+### Commission
+- Expected commission
+- Split
+- Referral fees
+- Estimated taxes
+- Net income
+
+### Timeline
+- Chronological history of the transaction
+- Notes
+- Emails
+- Tasks completed
+- Status changes
+- Uploaded documents
+
+### Communication
+- Email history
+- Text history (future)
+- Call log (future)
+
+### AI Assistant
+Future capability:
+- Summarize transaction status
+- Generate emails
+- Draft contingency removals
+- Draft repair responses
+- Answer transaction questions
+- Identify missing documents
+- Suggest next actions
+
+### Related Records
+- Linked contacts
+- Related listings
+- Future referrals
+- Previous transactions
+
+Every major future module should be designed to plug into a Transaction Workspace whenever practical.
+
+The Transaction Workspace is the primary operating screen of the application and should minimize the need for users to switch between modules.
+
+## 5. Core Design Principle: 360° Workspaces
+
+The application is built around a 360° Workspace philosophy.
+
+Every major record in the system should eventually have its own dedicated Workspace.
+
+Examples include:
+
+- Transaction Workspace
+- Contact Workspace
+- Property Workspace
+- Listing Workspace
+- Buyer Workspace
+- Seller Workspace
+
+Each Workspace should become the single place where users complete work related to that record.
+
+Avoid forcing users to jump between multiple modules.
+
+### Transaction Workspace
+
+Eventually contains:
+
+- Overview
+- Contacts
+- Property Information
+- Timeline
+- Tasks
+- Contract Deadlines
+- Documents
+- Notes
+- Commission
+- Communication
+- AI Assistant
+- Activity Feed
+- Related Records
+
+### Contact Workspace
+
+Eventually contains:
+
+- Contact Profile
+- Role(s)
+- Current Transactions
+- Previous Transactions
+- Listings
+- Buyer Activity
+- Notes
+- Tasks
+- Emails
+- Documents
+- Referral History
+- Timeline
+- AI Summary
+
+### Property Workspace
+
+Eventually contains:
+
+- Property Summary
+- Listing Information
+- MLS Information
+- Showing History
+- Offers
+- Transaction History
+- Photos
+- Documents
+- Notes
+- Deadlines
+- Related Contacts
+- Timeline
+- AI Summary
+
+### Listing Workspace
+
+Eventually contains:
+
+- Listing Status
+- Price History
+- Marketing
+- Showing Feedback
+- Offers
+- Documents
+- Timeline
+- Tasks
+
+### Buyer Workspace
+
+Eventually contains:
+
+- Buyer Preferences
+- Saved Searches
+- Favorite Properties
+- Showing History
+- Active Transactions
+- Notes
+- Communication
+- Timeline
+
+### Seller Workspace
+
+Eventually contains:
+
+- Active Listings
+- Previous Listings
+- Showing Feedback
+- Offers
+- Documents
+- Timeline
+- Communication
+
+### Universal Rules
+
+Every Workspace should eventually support:
+
+- Overview tab
+- Timeline tab
+- Notes
+- Documents
+- Tasks
+- AI Assistant
+- Related Records
+- Quick Actions
+- Search
+- Activity Feed
+
+Each workspace should feel like an operating console instead of a traditional database record.
+
+## 6. Tech Stack
 
 - Next.js 15
 - React 19
@@ -72,7 +298,7 @@ Visual style:
 - Vercel hosting
 - GitHub source control
 
-## 5. Core Navigation
+## 7. Core Navigation
 
 Initial navigation should include:
 
@@ -90,7 +316,7 @@ Initial navigation should include:
 - Mileage / Expenses
 - Settings
 
-## 6. Core Modules
+## 8. Core Modules
 
 ### Dashboard
 High-level overview of business activity.
@@ -186,7 +412,7 @@ Track mileage, business expenses, categories, and reports.
 ### Settings
 User management, roles, preferences, integrations, database settings, and app configuration.
 
-## 7. User Roles
+## 9. User Roles
 
 Initial roles:
 
@@ -204,7 +430,7 @@ Simplified full-business access. Intended for Tater.
 
 Do not overbuild these yet, but structure code so roles can be added later.
 
-## 8. Data Strategy
+## 10. Data Strategy
 
 Use Turso as the main database.
 
@@ -231,7 +457,7 @@ Future tables may include:
 - integrations
 - audit logs
 
-## 9. Integration Strategy
+## 11. Integration Strategy
 
 Future integrations may include:
 - Google Calendar
@@ -249,7 +475,7 @@ Future integrations may include:
 
 Build the app modularly so integrations can be added later without rewriting the core dashboard.
 
-## 10. Coding Standards
+## 12. Coding Standards
 
 Use:
 - TypeScript
@@ -271,7 +497,7 @@ Avoid:
 - premature optimization
 - fake marketing pages
 
-## 11. Folder Strategy
+## 13. Folder Strategy
 
 Use the existing structure:
 
@@ -299,7 +525,7 @@ src/features/commissions
 src/features/documents
 src/features/templates
 
-## 12. Development Rules
+## 14. Development Rules
 
 Before building a major feature:
 - check this PROJECT_MASTER_PLAN.md
@@ -312,7 +538,7 @@ Before building a major feature:
 
 Every major new feature should update this file if it changes the project direction.
 
-## 13. Current Milestone
+## 15. Current Milestone
 
 Milestone 1:
 - GitHub repository created
