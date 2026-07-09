@@ -1,17 +1,23 @@
-"use client";
+import { notFound } from "next/navigation";
 
-import { notFound, useParams } from "next/navigation";
+import { TransactionWorkspace } from "@/features/transactions/components/workspace/transaction-workspace";
+import { getTransactionWorkspace } from "@/services/transactions/queries";
 
-import { TransactionWorkspaceShell } from "@/components/transaction-workspace";
-import { getMockTransactionWorkspace } from "@/lib/transaction-progress";
+export const dynamic = "force-dynamic";
 
-export default function TransactionWorkspacePage() {
-  const params = useParams<{ id: string }>();
-  const workspace = getMockTransactionWorkspace(params.id);
+type TransactionWorkspaceRoutePageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function TransactionWorkspaceRoutePage({
+  params,
+}: TransactionWorkspaceRoutePageProps) {
+  const { id } = await params;
+  const workspace = await getTransactionWorkspace(id);
 
   if (!workspace) {
     notFound();
   }
 
-  return <TransactionWorkspaceShell workspace={workspace} />;
+  return <TransactionWorkspace workspace={workspace} />;
 }

@@ -59,6 +59,7 @@ type DataTableProps<T extends { id: string }> = {
   rowActions?: RowAction<T>[];
   emptyMessage?: string;
   className?: string;
+  onRowClick?: (row: T) => void;
 };
 
 function defaultFilter<T>(row: T, query: string, columns: DataTableColumn<T>[]) {
@@ -116,6 +117,7 @@ export function DataTable<T extends { id: string }>({
   rowActions = [],
   emptyMessage = "No records match your search.",
   className,
+  onRowClick,
 }: DataTableProps<T>) {
   const [query, setQuery] = useState("");
   const [sortColumnId, setSortColumnId] = useState<string | null>(null);
@@ -266,6 +268,8 @@ export function DataTable<T extends { id: string }>({
                 <TableRow
                   key={row.id}
                   data-state={selectedIds.includes(row.id) ? "selected" : undefined}
+                  className={onRowClick ? "cursor-pointer" : undefined}
+                  onClick={() => onRowClick?.(row)}
                 >
                   {selectable ? (
                     <TableCell>
@@ -325,7 +329,11 @@ export function DataTable<T extends { id: string }>({
           pageRows.map((row) => (
             <article
               key={row.id}
-              className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm"
+              className={cn(
+                "rounded-2xl border border-border/70 bg-card p-4 shadow-sm",
+                onRowClick && "cursor-pointer",
+              )}
+              onClick={() => onRowClick?.(row)}
             >
               <div className="flex items-start justify-between gap-3">
                 {selectable ? (
