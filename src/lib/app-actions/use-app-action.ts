@@ -1,27 +1,57 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
 
 import { useCommandPalette } from "@/components/command-palette/command-palette-provider";
+import { dispatchAppActionEvent } from "@/lib/app-actions/events";
 import {
   createAppActionHandler,
   executeAppAction,
   executeAppActionByLabel,
 } from "@/lib/app-actions/handler";
-import { getActionLabel, getAppAction } from "@/lib/app-actions/registry";
+import { getAppAction, NEW_TRANSACTION_LAUNCH_PATH } from "@/lib/app-actions/registry";
 import type { AppActionContext, AppActionId } from "@/lib/app-actions/types";
+
+function buildPageCallbacks(pathname: string) {
+  const callbacks: Partial<Record<AppActionId, () => void>> = {};
+
+  if (pathname === "/transactions") {
+    callbacks.new_transaction = () => dispatchAppActionEvent("new_transaction");
+  }
+
+  return callbacks;
+}
 
 export function useAppActionContext(): AppActionContext {
   const router = useRouter();
+  const pathname = usePathname();
   const { setOpen: setCommandPaletteOpen } = useCommandPalette();
+
+  const navigate = useCallback(
+    (href: string) => {
+      if (href === NEW_TRANSACTION_LAUNCH_PATH && pathname === "/transactions") {
+        dispatchAppActionEvent("new_transaction");
+        return;
+      }
+
+      router.push(href);
+    },
+    [pathname, router],
+  );
+
+  const callbacks = useMemo(
+    () => buildPageCallbacks(pathname),
+    [pathname],
+  );
 
   return useMemo(
     () => ({
-      navigate: (href: string) => router.push(href),
+      navigate,
       openCommandPalette: () => setCommandPaletteOpen(true),
+      callbacks,
     }),
-    [router, setCommandPaletteOpen],
+    [callbacks, navigate, setCommandPaletteOpen],
   );
 }
 
@@ -47,17 +77,20 @@ export function useAppAction() {
     [context],
   );
 
-  const getActionProps = useCallback((actionId: AppActionId) => {
-    const action = getAppAction(actionId);
+  const getActionProps = useCallback(
+    (actionId: AppActionId) => {
+      const action = getAppAction(actionId);
 
-    return {
-      actionId,
-      label: action.label,
-      onClick: createAppActionHandler(actionId, context),
-      disabled: action.status === "disabled",
-      disabledReason: action.disabledReason,
-    };
-  }, [context]);
+      return {
+        actionId,
+        label: action.label,
+        onClick: createAppActionHandler(actionId, context),
+        disabled: action.status === "disabled",
+        disabledReason: action.disabledReason,
+      };
+    },
+    [context],
+  );
 
   return {
     context,
@@ -65,6 +98,5 @@ export function useAppAction() {
     runByLabel,
     getHandler,
     getActionProps,
-    getActionLabel,
   };
 }

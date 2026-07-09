@@ -36,3 +36,8 @@ export {
   printAppActionAudit,
 } from "@/lib/app-actions/audit";
 export { useAppAction, useAppActionContext } from "@/lib/app-actions/use-app-action";
+export {
+  dispatchAppActionEvent,
+  getAppActionEventName,
+  subscribeToAppActionEvent,
+} from "@/lib/app-actions/events";

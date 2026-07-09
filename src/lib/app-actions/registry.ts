@@ -19,7 +19,7 @@ export const appActionRegistry: Record<AppActionId, AppActionDefinition> = {
     id: "new_transaction",
     label: "New Transaction",
     status: "implemented",
-    behavior: "route",
+    behavior: "modal",
     route: "/transactions?new=1",
     aliases: ["Add Transaction"],
     surfaces: ["page_header", "empty_state", "command_palette"],

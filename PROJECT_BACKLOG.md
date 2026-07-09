@@ -147,3 +147,78 @@ Solution:
 
 Status:
 Fixed
+
+## Button Functionality Audit
+
+Definition: A button is **Functional** only if it performs the real expected workflow (opens the correct form/wizard/modal or navigates to a working page). A **Placeholder** intentionally shows coming-soon feedback for an unbuilt feature. **Broken** means the button should work now but only shows a placeholder or does nothing.
+
+### Core transaction workflow
+
+| Button | Location | Current behavior | Expected behavior | Classification | Priority |
+|--------|----------|------------------|-------------------|----------------|----------|
+| New Transaction | Transactions PageHeader | Opens New Transaction wizard | Open wizard | Functional | P0 |
+| New Transaction | Command Palette | Routes to `/transactions?new=1` and opens wizard | Open wizard | Functional | P0 |
+| New Transaction | Module empty state (`page-config`) | Routes to `/transactions?new=1` and opens wizard | Open wizard | Functional | P0 |
+| Upload Purchase Agreement | Wizard entry screen | Shows upload prompt with Continue Manually | Show AI-coming-soon prompt, then manual path | Functional (MVP) | P1 |
+| Create Manually | Wizard entry screen | Starts manual wizard step 1 | Start manual wizard | Functional | P0 |
+| Continue Manually | Wizard upload prompt | Starts manual wizard step 1 | Start manual wizard | Functional | P0 |
+| Create Transaction | Wizard review step | Saves to Turso and redirects to workspace | Create transaction + redirect | Functional | P0 |
+
+### PageHeader primary actions (module pages)
+
+| Button | Location | Current behavior | Expected behavior | Classification | Priority |
+|--------|----------|------------------|-------------------|----------------|----------|
+| Add Buyer | `/buyers` PageHeader + EmptyState | Coming-soon toast | Open buyer create form | Placeholder | P2 |
+| Add Listing | `/sellers` PageHeader + EmptyState | Coming-soon toast | Open listing create form | Placeholder | P2 |
+| Add Deadline | `/deadlines` PageHeader + EmptyState | Coming-soon toast | Open deadline create form | Placeholder | P2 |
+| Add Task | `/tasks` PageHeader + EmptyState | Coming-soon toast | Open task create form | Placeholder | P2 |
+| Add Contact | `/contacts` PageHeader + EmptyState | Coming-soon toast | Open contact create form | Placeholder | P2 |
+| Schedule Showing | `/showings` PageHeader + EmptyState | Coming-soon toast | Open showing scheduler | Placeholder | P2 |
+| Add Link | `/documents` PageHeader + EmptyState | Coming-soon toast | Open link create form | Placeholder | P2 |
+| Create Template | `/templates` PageHeader + EmptyState | Coming-soon toast | Open template editor | Placeholder | P2 |
+| Add Commission | `/commissions` PageHeader + EmptyState | Coming-soon toast | Open commission form | Placeholder | P2 |
+| Add Expense | `/expenses` PageHeader + EmptyState | Coming-soon toast | Open expense form | Placeholder | P2 |
+| Open Preferences | `/settings` PageHeader + EmptyState | Coming-soon toast | Open settings preferences | Placeholder | P2 |
+| Import Deal | `/transactions` secondary PageHeader | Coming-soon toast | Import deal workflow | Placeholder | P3 |
+
+### Dashboard
+
+| Button | Location | Current behavior | Expected behavior | Classification | Priority |
+|--------|----------|------------------|-------------------|----------------|----------|
+| Add Task | Dashboard PageHeader | Coming-soon toast | Open task create form | Placeholder | P2 |
+| View Deadlines | Dashboard PageHeader secondary | Navigates to `/deadlines` | Open deadlines page | Functional | P0 |
+| Dashboard overview cards | Dashboard grid | Link to module pages | Navigate to module | Functional | P1 |
+
+### Command Palette
+
+| Button | Location | Current behavior | Expected behavior | Classification | Priority |
+|--------|----------|------------------|-------------------|----------------|----------|
+| Navigation items | Command Palette | Navigate to module routes | Navigate | Functional | P1 |
+| New Transaction | Command Palette actions | Opens wizard via route/callback | Open wizard | Functional | P0 |
+| View Deadlines | Command Palette actions | Navigates to `/deadlines` | Open deadlines page | Functional | P0 |
+| Add Buyer / Add Task / etc. | Command Palette actions | Coming-soon toast | Real create workflows when built | Placeholder | P2 |
+| Workspace search results | Command Palette workspaces | Navigate + workspace placeholder toast | Open record workspace | Placeholder | P2 |
+
+### Transaction Workspace
+
+| Button | Location | Current behavior | Expected behavior | Classification | Priority |
+|--------|----------|------------------|-------------------|----------------|----------|
+| Edit | Workspace summary quick action | Coming-soon toast | Open transaction edit form | Placeholder | P2 |
+| Add Task | Workspace summary + Tasks tab empty state | Coming-soon toast | Open task create form linked to transaction | Placeholder | P2 |
+| Add Note | Workspace summary + Notes tab empty state | Coming-soon toast | Open note create form | Placeholder | P2 |
+| Upload Document | Workspace summary quick action | Coming-soon toast | Open document upload | Placeholder | P2 |
+| Add Deadline | Deadlines tab empty state | Coming-soon toast | Open deadline create form | Placeholder | P2 |
+| Add Link | Documents tab empty state | Coming-soon toast | Open link create form | Placeholder | P2 |
+| AI Assistant tab | Workspace tabs | Static placeholder copy | AI assistant workflow | Placeholder | P3 |
+| Timeline tab | Workspace tabs | Static placeholder copy | Activity timeline | Placeholder | P3 |
+
+### P0 fixes applied in this audit
+
+- New Transaction opens the wizard from every registry entry point (direct event on `/transactions`, route fallback elsewhere).
+- Create Manually and Continue Manually advance into the manual wizard (verified).
+- View Deadlines navigates to `/deadlines` from dashboard and command palette (verified).
+
+### Notes
+
+- REC-001 and REC-003 addressed feedback visibility, not feature completion. Placeholder toasts alone do not make a button functional.
+- Unbuilt create workflows remain intentionally Placeholder until their forms are implemented.
