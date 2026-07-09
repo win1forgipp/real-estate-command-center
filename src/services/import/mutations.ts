@@ -108,7 +108,7 @@ export async function createTransactionFromImport(input: {
       importConfidence: review.importConfidence ?? null,
       sourceDocumentCount: documentIds.length,
       archivedAt: importAsArchived ? new Date() : null,
-      archiveReason: importAsArchived ? review.archiveReason ?? "Imported as archived transaction" : null,
+      archiveReason: importAsArchived ? review.archiveReason ?? "ITI historical import" : null,
     })
     .returning();
 

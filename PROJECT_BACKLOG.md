@@ -66,11 +66,9 @@ Creating a transaction is the primary entry point into the app. Until users can 
 Acceptance Criteria:
 - New Transaction opens a modal or drawer wizard.
 - First screen asks: "How would you like to create this transaction?"
-- Option 1: Upload Purchase Agreement
-  - Show this option as Recommended.
-  - For now, clicking it should show a clear message:
-    "AI document extraction is coming soon. Continue with manual entry for now?"
-  - Provide a Continue Manually button.
+- Option 1: Intelligent Transaction Import (Recommended)
+  - Upload purchase agreement and supporting documents.
+  - Run ITI extraction, review extracted fields, then create the transaction.
 - Option 2: Create Manually
   - Starts the manual wizard.
 
@@ -241,7 +239,7 @@ Fixed
 ## REC-007
 
 Title:
-Build Intelligent Transaction Import
+Bring ITI online
 
 Priority:
 P0
@@ -249,17 +247,27 @@ P0
 Category:
 AI Core Workflow
 
+Area:
+Intelligent Transaction Import
+
 Implementation:
-- New Transaction wizard entry: Intelligent Import (recommended) and Create Manually.
-- Upload flow for purchase agreement plus optional supporting PDFs with mobile file/camera support.
-- AI extraction service abstraction (`src/services/ai-extraction/`) with OpenAI and mock/dev providers.
-- Review/edit screen with confidence indicators and archive decision for historical transactions.
-- Schema: documents, ai_extractions, transaction import/archive fields, archived status.
-- Local dev document storage (`.data/uploads/`); production path documented for Vercel Blob/S3.
-- Creates transaction, contacts, deadlines, notes, and document records on confirm.
+- Replaced coming-soon placeholder with full ITI upload and review flow in New Transaction wizard.
+- Drag-and-drop multi-file upload with per-file status indicators.
+- Footer uses shared ModalFooter: Back left, Continue Manually + Run ITI right.
+- ITI service layer at `src/services/iti/` with OpenAI provider and mock fallback.
+- Review Import screen with editable sections and archive decision for historical deals.
+- Creates transaction, contacts, deadlines, document metadata, and notes on confirm.
+- Archived imports use `transaction_status = archived` and are excluded from active dashboard counts.
 
 Status:
 Fixed
+
+### REC-007 Follow-up
+
+- Dedicated Archived Transactions list view (currently accessible via workspace URL only).
+- Production object storage migration (Vercel Blob / S3) — local `.data/uploads/` used in v1.
+- OCR for image uploads.
+- Wire workspace Upload Purchase Agreement action to open ITI directly on transactions page via event (route fallback exists).
 
 ## Button Functionality Audit
 
@@ -272,7 +280,7 @@ Definition: A button is **Functional** only if it performs the real expected wor
 | New Transaction | Transactions PageHeader | Opens New Transaction wizard | Open wizard | Functional | P0 |
 | New Transaction | Command Palette | Routes to `/transactions?new=1` and opens wizard | Open wizard | Functional | P0 |
 | New Transaction | Module empty state (`page-config`) | Routes to `/transactions?new=1` and opens wizard | Open wizard | Functional | P0 |
-| Upload Purchase Agreement | Wizard entry screen | Shows upload prompt with Continue Manually | Show AI-coming-soon prompt, then manual path | Functional (MVP) | P1 |
+| Upload Purchase Agreement | Wizard entry / workspace | Opens ITI upload flow | Run ITI extraction + review | Functional | P0 |
 | Create Manually | Wizard entry screen | Starts manual wizard step 1 | Start manual wizard | Functional | P0 |
 | Continue Manually | Wizard upload prompt | Starts manual wizard step 1 | Start manual wizard | Functional | P0 |
 | Create Transaction | Wizard review step | Saves to Turso and redirects to workspace | Create transaction + redirect | Functional | P0 |

@@ -2,7 +2,7 @@
 
 import { PenLine, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   PrimaryButton,
@@ -24,11 +24,12 @@ import {
 import { useValidatedForm } from "@/lib/design-system/form-helpers";
 import { typography } from "@/lib/design-system/typography";
 import { createTransactionAction } from "@/features/transactions/actions/create-transaction";
-import {
-  extractTransactionDocumentsAction,
-  type ExtractDocumentsResult,
-} from "@/features/transactions/actions/extract-transaction-documents";
+import { getItiConfigAction } from "@/features/transactions/actions/get-iti-config";
 import { importTransactionAction } from "@/features/transactions/actions/import-transaction";
+import {
+  runItiExtractionAction,
+  type RunItiResult,
+} from "@/features/transactions/actions/run-iti-extraction";
 import {
   extractionToReviewDefaults,
   importReviewSchema,
@@ -42,7 +43,11 @@ import type { UserDto } from "@/features/transactions/types";
 import { cn } from "@/lib/utils";
 
 import { IntelligentImportReview } from "./intelligent-import-review";
-import { IntelligentImportUpload } from "./intelligent-import-upload";
+import {
+  ItiUploadPanel,
+  updateItiFileStatuses,
+  type ItiUploadFile,
+} from "./iti-upload-panel";
 import {
   getManualStepFields,
   manualStepLabels,
@@ -61,6 +66,7 @@ type NewTransactionWizardProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agents: UserDto[];
+  initialScreen?: "entry" | "iti";
 };
 
 function getDefaultValues(agents: UserDto[]): NewTransactionFormValues {
@@ -117,14 +123,19 @@ export function NewTransactionWizard({
   open,
   onOpenChange,
   agents,
+  initialScreen = "entry",
 }: NewTransactionWizardProps) {
   const router = useRouter();
-  const [screen, setScreen] = useState<WizardScreen>("entry");
+  const [screen, setScreen] = useState<WizardScreen>(
+    initialScreen === "iti" ? "import-upload" : "entry",
+  );
   const [manualStep, setManualStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<ExtractDocumentsResult | null>(null);
+  const [itiSetupError, setItiSetupError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<RunItiResult | null>(null);
   const [importAsArchived, setImportAsArchived] = useState(false);
+  const [itiFiles, setItiFiles] = useState<ItiUploadFile[]>([]);
 
   const form = useValidatedForm(newTransactionFormSchema, {
     defaultValues: getDefaultValues(agents),
@@ -190,21 +201,29 @@ export function NewTransactionWizard({
     ),
   });
 
-  const resetWizard = () => {
-    setScreen("entry");
+  useEffect(() => {
+    if (open) {
+      void getItiConfigAction().then((config) => {
+        setItiSetupError(config.isConfigured ? null : config.setupMessage ?? null);
+      });
+    }
+  }, [open]);
+
+  const resetWizard = useCallback(() => {
+    setScreen(initialScreen === "iti" ? "import-upload" : "entry");
     setManualStep(1);
     setImportError(null);
     setImportResult(null);
     setImportAsArchived(false);
+    setItiFiles([]);
     form.reset(getDefaultValues(agents));
     setIsSubmitting(false);
-  };
+  }, [agents, form, initialScreen]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       resetWizard();
     }
-
     onOpenChange(nextOpen);
   };
 
@@ -221,6 +240,7 @@ export function NewTransactionWizard({
 
     if (screen === "import-review") {
       setScreen("import-upload");
+      setItiFiles(updateItiFileStatuses(itiFiles, "waiting"));
       return;
     }
 
@@ -230,33 +250,47 @@ export function NewTransactionWizard({
     }
   };
 
-  const handleExtract = async (formData: FormData) => {
+  const handleRunIti = async () => {
+    if (!itiFiles.length) {
+      setImportError("Add at least one document before running ITI.");
+      return;
+    }
+
     setImportError(null);
     setIsSubmitting(true);
+    setItiFiles(updateItiFileStatuses(itiFiles, "uploading"));
     setScreen("import-extracting");
 
+    const formData = new FormData();
+    itiFiles.forEach((entry) => {
+      formData.append("documents", entry.file);
+    });
+
     try {
-      const result = await extractTransactionDocumentsAction(formData);
+      setItiFiles(updateItiFileStatuses(itiFiles, "processing"));
+      const result = await runItiExtractionAction(formData);
       setImportResult(result);
-      setImportAsArchived(result.extraction.archiveCandidate.suggestedImportMode === "archived");
+      setImportAsArchived(
+        result.extraction.archiveCandidate.suggestedImportMode === "archived",
+      );
       importForm.reset(extractionToReviewDefaults(result.extraction, agents[0]?.id ?? ""));
 
-      if (result.setupMessage) {
-        notify.info("Import setup", result.setupMessage);
+      setItiFiles(updateItiFileStatuses(itiFiles, "review_suggested"));
+
+      if (result.setupMessage && !itiSetupError) {
+        notify.info("ITI setup", result.setupMessage);
       }
 
       setScreen("import-review");
     } catch (error) {
+      setItiFiles(updateItiFileStatuses(itiFiles, "failed"));
       setImportError(
         error instanceof Error
           ? error.message
-          : "AI extraction failed. You can continue manually.",
+          : "ITI extraction failed. Retry or continue manually.",
       );
       setScreen("import-upload");
-      notify.error(
-        "Extraction failed",
-        "Review your files or continue with manual entry.",
-      );
+      notify.error("ITI failed", "Review your files or continue with manual entry.");
     } finally {
       setIsSubmitting(false);
     }
@@ -297,11 +331,9 @@ export function NewTransactionWizard({
   const handleNext = async () => {
     const fields = getManualStepFields(manualStep);
     const isValid = fields.length ? await form.trigger(fields) : true;
-
     if (!isValid) {
       return;
     }
-
     setManualStep((step) => Math.min(step + 1, manualStepLabels.length));
   };
 
@@ -316,43 +348,31 @@ export function NewTransactionWizard({
     try {
       const input = formValuesToCreateInput(form.getValues());
       const result = await createTransactionAction(input);
-
-      notify.success(
-        "Transaction created",
-        "Opening the new transaction workspace.",
-      );
+      notify.success("Transaction created", "Opening the new transaction workspace.");
       handleOpenChange(false);
       router.push(`/transactions/${result.id}`);
     } catch {
-      notify.error(
-        "Could not create transaction",
-        "Please check your entries and try again.",
-      );
+      notify.error("Could not create transaction", "Please check your entries and try again.");
       setIsSubmitting(false);
     }
   };
 
-  const showBackButton =
-    screen === "manual" || screen === "import-upload" || screen === "import-review";
-
   const dialogTitle =
     screen === "entry"
       ? "How would you like to create this transaction?"
-      : screen === "import-upload"
+      : screen === "import-upload" || screen === "import-extracting"
         ? "Intelligent Transaction Import"
-        : screen === "import-extracting"
-          ? "Extracting transaction data..."
-          : screen === "import-review"
-            ? "Review imported transaction"
-            : `New Transaction · ${manualStepLabels[manualStep - 1]}`;
+        : screen === "import-review"
+          ? "Review Import"
+          : `New Transaction · ${manualStepLabels[manualStep - 1]}`;
 
   const dialogDescription =
     screen === "entry"
       ? "Choose the fastest path to get a new deal into your workspace."
       : screen === "import-upload"
-        ? "Upload a Purchase Agreement and optional supporting documents for AI extraction."
+        ? "Upload your transaction documents and let ITI extract the key transaction details."
         : screen === "import-extracting"
-          ? "Reading your documents and extracting key transaction fields."
+          ? "ITI is reading your documents and extracting key fields."
           : screen === "import-review"
             ? "Review and edit extracted values before creating the workspace."
             : "Complete each step to create a transaction and open its workspace.";
@@ -369,8 +389,8 @@ export function NewTransactionWizard({
           {screen === "entry" ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <EntryOptionCard
-                title="Intelligent Import"
-                description="Upload a Purchase Agreement and supporting documents. AI will extract transaction details."
+                title="Intelligent Transaction Import"
+                description="Upload a Purchase Agreement and supporting documents. ITI will extract transaction details."
                 icon={Sparkles}
                 badge="Recommended"
                 onClick={() => setScreen("import-upload")}
@@ -385,16 +405,17 @@ export function NewTransactionWizard({
           ) : null}
 
           {screen === "import-upload" ? (
-            <IntelligentImportUpload
-              onExtract={handleExtract}
-              isExtracting={isSubmitting}
-              errorMessage={importError}
+            <ItiUploadPanel
+              files={itiFiles}
+              onFilesChange={setItiFiles}
+              setupError={itiSetupError}
+              extractionError={importError}
             />
           ) : null}
 
           {screen === "import-extracting" ? (
             <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/20 p-5">
-              <p className={typography.body}>Analyzing your documents...</p>
+              <p className={typography.body}>ITI is analyzing your documents...</p>
               <p className={typography.bodyMuted}>
                 This may take a moment depending on file size and AI provider availability.
               </p>
@@ -419,7 +440,7 @@ export function NewTransactionWizard({
           ) : null}
         </div>
 
-        {screen === "import-upload" && importError ? (
+        {screen === "import-upload" ? (
           <ModalFooter>
             <ModalFooterActions
               secondaryAction={
@@ -427,18 +448,30 @@ export function NewTransactionWizard({
                   type="button"
                   className="w-full sm:w-auto"
                   onClick={handleBack}
+                  disabled={isSubmitting}
                 >
                   Back
                 </SecondaryButton>
               }
               primaryAction={
-                <PrimaryButton
-                  type="button"
-                  className="w-full sm:w-auto"
-                  onClick={startManualWizard}
-                >
-                  Continue Manually
-                </PrimaryButton>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  <SecondaryButton
+                    type="button"
+                    className="w-full sm:w-auto"
+                    onClick={startManualWizard}
+                    disabled={isSubmitting}
+                  >
+                    Continue Manually
+                  </SecondaryButton>
+                  <PrimaryButton
+                    type="button"
+                    className="w-full sm:w-auto"
+                    onClick={handleRunIti}
+                    disabled={!itiFiles.length || isSubmitting}
+                  >
+                    Run ITI
+                  </PrimaryButton>
+                </div>
               }
             />
           </ModalFooter>
@@ -503,20 +536,6 @@ export function NewTransactionWizard({
                     {isSubmitting ? "Creating..." : "Create Transaction"}
                   </PrimaryButton>
                 )
-              }
-            />
-          </ModalFooter>
-        ) : showBackButton && screen !== "import-upload" && screen !== "import-review" ? (
-          <ModalFooter>
-            <ModalFooterActions
-              secondaryAction={
-                <SecondaryButton
-                  type="button"
-                  className="w-full sm:w-auto"
-                  onClick={handleBack}
-                >
-                  Back
-                </SecondaryButton>
               }
             />
           </ModalFooter>

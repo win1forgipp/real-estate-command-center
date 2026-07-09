@@ -3,7 +3,7 @@ import "server-only";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { DocumentType } from "@/services/ai-extraction/types";
+import type { ItiDocumentType } from "@/services/iti/types";
 
 /**
  * Local filesystem storage for development.
@@ -21,7 +21,7 @@ export type StoredFile = {
 
 export async function storeUploadedFile(
   file: File,
-  documentType: DocumentType,
+  documentType: ItiDocumentType,
 ): Promise<StoredFile> {
   const id = crypto.randomUUID();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");

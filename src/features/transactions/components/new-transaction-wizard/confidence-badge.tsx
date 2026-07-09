@@ -1,10 +1,10 @@
 "use client";
 
 import { StatusBadge } from "@/components/design-system/badges/status-badge";
-import type { ConfidenceLevel } from "@/services/ai-extraction/types";
+import type { ItiConfidenceLevel } from "@/services/iti/types";
 
 const confidenceConfig: Record<
-  ConfidenceLevel,
+  ItiConfidenceLevel,
   { label: string; variant: "success" | "warning" | "danger" | "default" }
 > = {
   high: { label: "High confidence", variant: "success" },
@@ -13,7 +13,7 @@ const confidenceConfig: Record<
   missing: { label: "Missing", variant: "default" },
 };
 
-export function ConfidenceBadge({ level }: { level: ConfidenceLevel }) {
+export function ConfidenceBadge({ level }: { level: ItiConfidenceLevel }) {
   const config = confidenceConfig[level];
   return <StatusBadge label={config.label} variant={config.variant} className="shrink-0" />;
 }

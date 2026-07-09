@@ -3,6 +3,7 @@
 import { Controller, type UseFormReturn } from "react-hook-form";
 
 import { ConfidenceBadge } from "@/features/transactions/components/new-transaction-wizard/confidence-badge";
+import { StatusBadge } from "@/components/design-system/badges/status-badge";
 import { CurrencyInput } from "@/components/design-system/forms/currency-input";
 import { DatePickerInput } from "@/components/design-system/forms/date-picker-input";
 import { DropdownInput } from "@/components/design-system/forms/dropdown-input";
@@ -11,13 +12,13 @@ import { TextareaInput } from "@/components/design-system/forms/textarea-input";
 import { typography } from "@/lib/design-system/typography";
 import type { ImportReviewInput } from "@/features/transactions/schemas/import-transaction-schema";
 import { parseCurrencyValue } from "@/features/transactions/schemas/new-transaction-schema";
-import type { ConfidenceLevel, PurchaseAgreementExtraction } from "@/services/ai-extraction/types";
+import type { ItiConfidenceLevel, ItiExtractionResult } from "@/services/iti/types";
 import type { UserDto } from "@/features/transactions/types";
 import { cn } from "@/lib/utils";
 
 type IntelligentImportReviewProps = {
   form: UseFormReturn<ImportReviewInput>;
-  extraction: PurchaseAgreementExtraction;
+  extraction: ItiExtractionResult;
   agents: UserDto[];
   importAsArchived: boolean;
   onImportModeChange: (archived: boolean) => void;
@@ -42,7 +43,7 @@ function FieldRow({
   confidence,
   children,
 }: {
-  confidence?: ConfidenceLevel;
+  confidence?: ItiConfidenceLevel;
   children: React.ReactNode;
 }) {
   return (
@@ -130,6 +131,23 @@ export function IntelligentImportReview({
         <FieldRow confidence={extraction.transaction.mlsNumber.confidence}>
           <TextInput label="MLS Number" {...register("mlsNumber")} />
         </FieldRow>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DatePickerInput label="Contract Date" {...register("contractDate")} />
+          <DatePickerInput label="Closing Date" {...register("closingDate")} />
+        </div>
+        <Controller
+          name="purchasePrice"
+          control={control}
+          render={({ field }) => (
+            <FieldRow confidence={extraction.transaction.purchasePrice.confidence}>
+              <CurrencyInput
+                label="Purchase Price"
+                value={field.value?.toString() ?? ""}
+                onChange={(value) => field.onChange(parseCurrencyValue(value))}
+              />
+            </FieldRow>
+          )}
+        />
         <FieldRow confidence={extraction.transaction.specialTerms.confidence}>
           <TextareaInput label="Special Terms" {...register("specialTerms")} />
         </FieldRow>
@@ -145,6 +163,27 @@ export function IntelligentImportReview({
                 { label: "Buyer Representation", value: "buyer" },
                 { label: "Seller Listing", value: "seller" },
                 { label: "Dual Agency", value: "dual" },
+              ]}
+            />
+          )}
+        />
+        <Controller
+          name="transactionStatus"
+          control={control}
+          render={({ field }) => (
+            <DropdownInput
+              label="Status"
+              value={field.value ?? ""}
+              onValueChange={field.onChange}
+              options={[
+                { label: "Prospect", value: "prospect" },
+                { label: "Under Contract", value: "under_contract" },
+                { label: "Inspection", value: "inspection" },
+                { label: "Appraisal", value: "appraisal" },
+                { label: "Financing", value: "financing" },
+                { label: "Closing", value: "closing" },
+                { label: "Closed", value: "closed" },
+                { label: "Cancelled", value: "cancelled" },
               ]}
             />
           )}
@@ -177,12 +216,16 @@ export function IntelligentImportReview({
         <FieldRow confidence={extraction.parties.sellingAgent.confidence}>
           <TextInput label="Selling Agent" {...register("sellingAgent")} />
         </FieldRow>
+        <FieldRow confidence={extraction.parties.listingBrokerage.confidence}>
+          <TextInput label="Listing Brokerage" {...register("listingBrokerage")} />
+        </FieldRow>
+        <FieldRow confidence={extraction.parties.sellingBrokerage.confidence}>
+          <TextInput label="Selling Brokerage" {...register("sellingBrokerage")} />
+        </FieldRow>
       </Section>
 
       <Section title="Dates & Deadlines">
         <div className="grid gap-4 sm:grid-cols-2">
-          <DatePickerInput label="Contract Date" {...register("contractDate")} />
-          <DatePickerInput label="Closing Date" {...register("closingDate")} />
           <DatePickerInput label="Inspection Deadline" {...register("inspectionDeadline")} />
           <DatePickerInput label="Financing Deadline" {...register("financingDeadline")} />
           <DatePickerInput label="Appraisal Deadline" {...register("appraisalDeadline")} />
@@ -193,17 +236,6 @@ export function IntelligentImportReview({
       </Section>
 
       <Section title="Money / EMD">
-        <Controller
-          name="purchasePrice"
-          control={control}
-          render={({ field }) => (
-            <CurrencyInput
-              label="Purchase Price"
-              value={field.value?.toString() ?? ""}
-              onChange={(value) => field.onChange(parseCurrencyValue(value))}
-            />
-          )}
-        />
         <Controller
           name="earnestMoneyAmount"
           control={control}
@@ -243,6 +275,19 @@ export function IntelligentImportReview({
             />
           )}
         />
+        <Controller
+          name="commission"
+          control={control}
+          render={({ field }) => (
+            <FieldRow confidence={extraction.money.commission.confidence}>
+              <CurrencyInput
+                label="Commission"
+                value={field.value?.toString() ?? ""}
+                onChange={(value) => field.onChange(parseCurrencyValue(value))}
+              />
+            </FieldRow>
+          )}
+        />
       </Section>
 
       <Section title="Service Providers">
@@ -261,9 +306,25 @@ export function IntelligentImportReview({
                 key={doc.fileName}
                 className="rounded-lg border border-border/60 px-3 py-2 text-sm"
               >
-                <p className="font-medium text-foreground">{doc.fileName}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium text-foreground">{doc.fileName}</p>
+                  <StatusBadge
+                    label={`${doc.confidenceScore}% confidence`}
+                    variant={
+                      doc.confidenceScore >= 80
+                        ? "success"
+                        : doc.confidenceScore >= 50
+                          ? "warning"
+                          : "default"
+                    }
+                  />
+                </div>
                 <p className="text-muted-foreground">
-                  {doc.documentType.replaceAll("_", " ")} · {doc.summary}
+                  {doc.documentType.replaceAll("_", " ")} ·{" "}
+                  {doc.summary ?? "No summary available"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Status: Parsed Successfully
                 </p>
               </li>
             ))}

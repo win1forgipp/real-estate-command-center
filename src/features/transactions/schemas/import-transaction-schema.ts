@@ -56,8 +56,10 @@ export const importReviewSchema = z.object({
 
 export type ImportReviewInput = z.infer<typeof importReviewSchema>;
 
+import type { ItiExtractionResult } from "@/services/iti/types";
+
 export function extractionToReviewDefaults(
-  extraction: import("@/services/ai-extraction/types").PurchaseAgreementExtraction,
+  extraction: ItiExtractionResult,
   assignedUserId: string,
 ): ImportReviewInput {
   return {

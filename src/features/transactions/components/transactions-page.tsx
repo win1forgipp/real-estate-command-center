@@ -19,15 +19,18 @@ export function TransactionsPage({ transactions, agents }: TransactionsPageProps
   const router = useRouter();
   const searchParams = useSearchParams();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardInitialScreen, setWizardInitialScreen] = useState<"entry" | "iti">("entry");
 
   useEffect(() => {
     if (searchParams.get("new") === "1") {
       setWizardOpen(true);
+      setWizardInitialScreen(searchParams.get("iti") === "1" ? "iti" : "entry");
     }
   }, [searchParams]);
 
   useEffect(() => {
     return subscribeToAppActionEvent("new_transaction", () => {
+      setWizardInitialScreen("entry");
       setWizardOpen(true);
     });
   }, []);
@@ -36,7 +39,7 @@ export function TransactionsPage({ transactions, agents }: TransactionsPageProps
     (open: boolean) => {
       setWizardOpen(open);
 
-      if (!open && searchParams.get("new") === "1") {
+      if (!open && (searchParams.get("new") === "1" || searchParams.get("iti") === "1")) {
         router.replace("/transactions");
       }
     },
@@ -55,6 +58,7 @@ export function TransactionsPage({ transactions, agents }: TransactionsPageProps
         open={wizardOpen}
         onOpenChange={handleWizardOpenChange}
         agents={agents}
+        initialScreen={wizardInitialScreen}
       />
     </PageContainer>
   );

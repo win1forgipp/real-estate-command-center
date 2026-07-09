@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { documents } from "@/db/schema";
-import type { DocumentType } from "@/services/ai-extraction/types";
+import type { ItiDocumentType } from "@/services/iti/types";
 
 export type CreateDocumentInput = {
   transactionId?: string;
@@ -12,7 +12,7 @@ export type CreateDocumentInput = {
   fileType: string;
   fileSize: number;
   storagePath: string;
-  documentType: DocumentType;
+  documentType: ItiDocumentType;
   extractedSummary?: string;
   confidenceScore?: number;
 };

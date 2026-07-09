@@ -46,11 +46,11 @@ export const appActionRegistry: Record<AppActionId, AppActionDefinition> = {
   upload_purchase_agreement: {
     id: "upload_purchase_agreement",
     label: "Upload Purchase Agreement",
-    status: "placeholder",
-    behavior: "toast",
-    toastTitle: "AI document extraction is coming soon.",
-    toastDescription: "Continue with manual entry for now.",
+    status: "implemented",
+    behavior: "modal",
+    route: "/transactions?new=1&iti=1",
     surfaces: ["workspace"],
+    paletteKeywords: ["upload", "purchase agreement", "iti", "import"],
   },
   add_buyer: modalAction({
     id: "add_buyer",
