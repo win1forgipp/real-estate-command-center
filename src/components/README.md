@@ -362,6 +362,30 @@ Registry lives in `src/lib/command-palette/registry.ts`. Extend that file when a
 
 ---
 
+## Transaction Progress Tracker
+
+Reusable lifecycle tracker for Transaction Workspaces. Stage sequences are **not** hardcoded in the component — they come from transaction type definitions in `src/lib/transaction-progress/stage-definitions.ts`.
+
+```tsx
+import { TransactionProgressTracker } from "@/components/transaction-workspace";
+
+<TransactionProgressTracker
+  transactionType="residential_purchase"
+  progress={[
+    { stageId: "contract_signed", state: "completed", completedAt: "2026-06-18" },
+    { stageId: "inspection_period", state: "active" },
+  ]}
+/>
+```
+
+**Stage states:** `not_started` (gray), `active` (blue), `completed` (green), `attention_required` (red)
+
+**Supported transaction types:** `residential_purchase`, `residential_listing`, `commercial`, `land`, `investment`
+
+Mock workspace demo: `/transactions/tx-oak-lane`
+
+---
+
 ## What not to do
 
 - Do not fetch database records inside design system components
