@@ -2,7 +2,7 @@ import { notInArray } from "drizzle-orm";
 
 import { transactions } from "@/db/schema";
 
-export const INACTIVE_TRANSACTION_STATUSES = ["closed", "cancelled"] as const;
+export const INACTIVE_TRANSACTION_STATUSES = ["closed", "cancelled", "archived"] as const;
 
 export function activeTransactionsFilter() {
   return notInArray(transactions.transactionStatus, [

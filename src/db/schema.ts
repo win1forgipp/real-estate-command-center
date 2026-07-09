@@ -83,6 +83,7 @@ export const transactions = sqliteTable(
         "closing",
         "closed",
         "cancelled",
+        "archived",
       ],
     })
       .notNull()
@@ -99,6 +100,16 @@ export const transactions = sqliteTable(
     attorneyName: text("attorney_name"),
     titleCompany: text("title_company"),
     mlsNumber: text("mls_number"),
+    specialTerms: text("special_terms"),
+    sellerConcessions: integer("seller_concessions"),
+    closingCompany: text("closing_company"),
+    archivedAt: integer("archived_at", { mode: "timestamp" }),
+    archiveReason: text("archive_reason"),
+    importedFromDocument: integer("imported_from_document", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    importConfidence: integer("import_confidence"),
+    sourceDocumentCount: integer("source_document_count"),
     assignedUserId: text("assigned_user_id").references(() => users.id),
     ...timestamps,
   },
@@ -198,6 +209,52 @@ export const links = sqliteTable("links", {
   ...timestamps,
 });
 
+export const documents = sqliteTable(
+  "documents",
+  {
+    id: id(),
+    transactionId: text("transaction_id").references(() => transactions.id),
+    fileName: text("file_name").notNull(),
+    fileType: text("file_type").notNull(),
+    fileSize: integer("file_size").notNull(),
+    storagePath: text("storage_path").notNull(),
+    documentType: text("document_type", {
+      enum: [
+        "purchase_agreement",
+        "addendum",
+        "amendment",
+        "contingency_removal",
+        "inspection_response",
+        "repair_addendum",
+        "closing_document",
+        "other",
+      ],
+    }).notNull(),
+    extractedSummary: text("extracted_summary"),
+    confidenceScore: integer("confidence_score"),
+    ...timestamps,
+  },
+  (table) => [index("documents_transaction_id_idx").on(table.transactionId)],
+);
+
+export const aiExtractions = sqliteTable(
+  "ai_extractions",
+  {
+    id: id(),
+    transactionId: text("transaction_id").references(() => transactions.id),
+    sourceDocumentIds: text("source_document_ids").notNull(),
+    extractedJson: text("extracted_json").notNull(),
+    confidenceScore: integer("confidence_score"),
+    status: text("status", {
+      enum: ["pending_review", "accepted", "rejected"],
+    })
+      .notNull()
+      .default("pending_review"),
+    ...timestamps,
+  },
+  (table) => [index("ai_extractions_transaction_id_idx").on(table.transactionId)],
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Contact = typeof contacts.$inferSelect;
@@ -212,6 +269,10 @@ export type Note = typeof notes.$inferSelect;
 export type NewNote = typeof notes.$inferInsert;
 export type Link = typeof links.$inferSelect;
 export type NewLink = typeof links.$inferInsert;
+export type Document = typeof documents.$inferSelect;
+export type NewDocument = typeof documents.$inferInsert;
+export type AiExtraction = typeof aiExtractions.$inferSelect;
+export type NewAiExtraction = typeof aiExtractions.$inferInsert;
 
 export const schema = {
   users,
@@ -221,4 +282,6 @@ export const schema = {
   deadlines,
   notes,
   links,
+  documents,
+  aiExtractions,
 };

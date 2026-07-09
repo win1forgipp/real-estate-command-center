@@ -9,6 +9,7 @@ const transactionStatusConfig = {
   closing: { label: "Closing", variant: "success" as const },
   closed: { label: "Closed", variant: "success" as const },
   cancelled: { label: "Cancelled", variant: "danger" as const },
+  archived: { label: "Archived", variant: "default" as const },
 };
 
 export type TransactionStatus = keyof typeof transactionStatusConfig;

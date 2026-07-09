@@ -238,6 +238,29 @@ Implementation:
 Status:
 Fixed
 
+## REC-007
+
+Title:
+Build Intelligent Transaction Import
+
+Priority:
+P0
+
+Category:
+AI Core Workflow
+
+Implementation:
+- New Transaction wizard entry: Intelligent Import (recommended) and Create Manually.
+- Upload flow for purchase agreement plus optional supporting PDFs with mobile file/camera support.
+- AI extraction service abstraction (`src/services/ai-extraction/`) with OpenAI and mock/dev providers.
+- Review/edit screen with confidence indicators and archive decision for historical transactions.
+- Schema: documents, ai_extractions, transaction import/archive fields, archived status.
+- Local dev document storage (`.data/uploads/`); production path documented for Vercel Blob/S3.
+- Creates transaction, contacts, deadlines, notes, and document records on confirm.
+
+Status:
+Fixed
+
 ## Button Functionality Audit
 
 Definition: A button is **Functional** only if it performs the real expected workflow (opens the correct form/wizard/modal or navigates to a working page). A **Placeholder** intentionally shows coming-soon feedback for an unbuilt feature. **Broken** means the button should work now but only shows a placeholder or does nothing.
