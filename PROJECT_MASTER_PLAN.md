@@ -282,7 +282,50 @@ Every Workspace should eventually support:
 
 Each workspace should feel like an operating console instead of a traditional database record.
 
-## 6. Tech Stack
+## 6. Core Design Principle: Global Activity Timeline
+
+### Purpose
+
+The Real Estate Command Center should maintain a unified activity timeline across the entire application.
+
+Every meaningful action should eventually generate an activity event.
+
+Examples include:
+
+- Transaction created
+- Transaction status changed
+- Contact added
+- Property added
+- Deadline completed
+- Task completed
+- Document uploaded
+- Commission updated
+- Note created
+- Listing status changed
+- Showing completed
+- Offer received
+- Offer accepted
+- Closing completed
+- AI-generated document
+- AI-generated summary
+
+The activity timeline should support:
+
+- filtering by workspace
+- filtering by user
+- filtering by transaction
+- filtering by property
+- filtering by contact
+- filtering by date
+- filtering by activity type
+
+Every major workspace should contain a Timeline tab showing only activity related to that workspace.
+
+The Dashboard should eventually include a Recent Activity card showing the latest business activity across all workspaces.
+
+Future AI functionality may summarize activity timelines into daily, weekly, or transaction-specific summaries.
+
+## 7. Tech Stack
 
 - Next.js 15
 - React 19
@@ -298,7 +341,7 @@ Each workspace should feel like an operating console instead of a traditional da
 - Vercel hosting
 - GitHub source control
 
-## 7. Core Navigation
+## 8. Core Navigation
 
 Initial navigation should include:
 
@@ -316,7 +359,7 @@ Initial navigation should include:
 - Mileage / Expenses
 - Settings
 
-## 8. Core Modules
+## 9. Core Modules
 
 ### Dashboard
 High-level overview of business activity.
@@ -412,7 +455,7 @@ Track mileage, business expenses, categories, and reports.
 ### Settings
 User management, roles, preferences, integrations, database settings, and app configuration.
 
-## 9. User Roles
+## 10. User Roles
 
 Initial roles:
 
@@ -430,7 +473,7 @@ Simplified full-business access. Intended for Tater.
 
 Do not overbuild these yet, but structure code so roles can be added later.
 
-## 10. Data Strategy
+## 11. Data Strategy
 
 Use Turso as the main database.
 
@@ -457,7 +500,7 @@ Future tables may include:
 - integrations
 - audit logs
 
-## 11. Integration Strategy
+## 12. Integration Strategy
 
 Future integrations may include:
 - Google Calendar
@@ -475,7 +518,7 @@ Future integrations may include:
 
 Build the app modularly so integrations can be added later without rewriting the core dashboard.
 
-## 12. Coding Standards
+## 13. Coding Standards
 
 Use:
 - TypeScript
@@ -497,7 +540,7 @@ Avoid:
 - premature optimization
 - fake marketing pages
 
-## 13. Folder Strategy
+## 14. Folder Strategy
 
 Use the existing structure:
 
@@ -525,7 +568,7 @@ src/features/commissions
 src/features/documents
 src/features/templates
 
-## 14. Development Rules
+## 15. Development Rules
 
 Before building a major feature:
 - check this PROJECT_MASTER_PLAN.md
@@ -538,7 +581,7 @@ Before building a major feature:
 
 Every major new feature should update this file if it changes the project direction.
 
-## 15. Current Milestone
+## 16. Current Milestone
 
 Milestone 1:
 - GitHub repository created
