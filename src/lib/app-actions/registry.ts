@@ -1,5 +1,18 @@
 import type { AppActionDefinition, AppActionId } from "@/lib/app-actions/types";
 
+function modalAction(
+  config: Pick<
+    AppActionDefinition,
+    "id" | "label" | "aliases" | "surfaces" | "paletteKeywords" | "toastDescription"
+  >,
+): AppActionDefinition {
+  return {
+    status: "implemented",
+    behavior: "modal",
+    ...config,
+  };
+}
+
 function placeholderAction(
   config: Pick<
     AppActionDefinition,
@@ -39,19 +52,19 @@ export const appActionRegistry: Record<AppActionId, AppActionDefinition> = {
     toastDescription: "Continue with manual entry for now.",
     surfaces: ["workspace"],
   },
-  add_buyer: placeholderAction({
+  add_buyer: modalAction({
     id: "add_buyer",
     label: "Add Buyer",
     surfaces: ["page_header", "empty_state", "command_palette"],
     paletteKeywords: ["buyer", "client"],
   }),
-  add_listing: placeholderAction({
+  add_listing: modalAction({
     id: "add_listing",
     label: "Add Listing",
     surfaces: ["page_header", "empty_state", "command_palette"],
     paletteKeywords: ["listing", "seller"],
   }),
-  add_task: placeholderAction({
+  add_task: modalAction({
     id: "add_task",
     label: "Add Task",
     surfaces: ["page_header", "empty_state", "command_palette", "workspace", "dashboard"],
@@ -69,45 +82,46 @@ export const appActionRegistry: Record<AppActionId, AppActionDefinition> = {
     surfaces: ["workspace"],
     paletteKeywords: ["document", "upload", "file"],
   }),
-  add_contact: placeholderAction({
+  add_contact: modalAction({
     id: "add_contact",
     label: "Add Contact",
     surfaces: ["page_header", "empty_state", "command_palette"],
     paletteKeywords: ["contact", "crm"],
   }),
-  add_showing: placeholderAction({
+  add_showing: modalAction({
     id: "add_showing",
     label: "Schedule Showing",
     aliases: ["Add Showing"],
     surfaces: ["page_header", "empty_state", "command_palette"],
     paletteKeywords: ["showing", "schedule", "appointment"],
   }),
-  add_template: placeholderAction({
+  add_template: modalAction({
     id: "add_template",
     label: "Create Template",
     aliases: ["Add Template"],
     surfaces: ["page_header", "empty_state", "command_palette"],
     paletteKeywords: ["template", "email", "addendum"],
   }),
-  add_expense: placeholderAction({
+  add_expense: modalAction({
     id: "add_expense",
     label: "Add Expense",
+    aliases: ["Add Mileage"],
     surfaces: ["page_header", "empty_state", "command_palette"],
     paletteKeywords: ["expense", "mileage"],
   }),
-  add_link: placeholderAction({
+  add_link: modalAction({
     id: "add_link",
     label: "Add Link",
     surfaces: ["page_header", "empty_state", "workspace", "command_palette"],
     paletteKeywords: ["link", "document", "drive"],
   }),
-  add_deadline: placeholderAction({
+  add_deadline: modalAction({
     id: "add_deadline",
     label: "Add Deadline",
     surfaces: ["page_header", "empty_state", "workspace", "command_palette"],
     paletteKeywords: ["deadline", "contract date"],
   }),
-  add_commission: placeholderAction({
+  add_commission: modalAction({
     id: "add_commission",
     label: "Add Commission",
     surfaces: ["page_header", "empty_state", "command_palette"],
@@ -142,13 +156,31 @@ export const appActionRegistry: Record<AppActionId, AppActionDefinition> = {
     surfaces: ["command_palette"],
     paletteKeywords: ["command", "search", "palette"],
   },
-  open_settings: placeholderAction({
+  open_settings: modalAction({
     id: "open_settings",
     label: "Open Preferences",
     aliases: ["Open Settings"],
     surfaces: ["page_header", "empty_state", "command_palette"],
     paletteKeywords: ["settings", "preferences"],
-    toastDescription: "User preferences will be added in a future milestone.",
+  }),
+  open_profile: modalAction({
+    id: "open_profile",
+    label: "Profile",
+    surfaces: ["dashboard"],
+    paletteKeywords: ["profile", "user"],
+  }),
+  open_help: modalAction({
+    id: "open_help",
+    label: "Help",
+    surfaces: ["dashboard"],
+    paletteKeywords: ["help", "support"],
+  }),
+  sign_out: modalAction({
+    id: "sign_out",
+    label: "Sign Out",
+    aliases: ["Logout"],
+    surfaces: ["dashboard"],
+    paletteKeywords: ["sign out", "logout"],
   }),
   coming_soon: {
     id: "coming_soon",

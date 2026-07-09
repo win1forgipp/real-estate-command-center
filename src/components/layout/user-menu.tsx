@@ -11,10 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAppAction } from "@/lib/app-actions/use-app-action";
 import { currentUser } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 export function UserMenu() {
+  const { run } = useAppAction();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -45,22 +48,22 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => run("open_profile")}>
           <UserRound className="size-4" />
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => run("open_settings")}>
           <Settings2 className="size-4" />
           Preferences
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => run("open_help")}>
           <CircleHelp className="size-4" />
           Help
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">
+        <DropdownMenuItem variant="destructive" onSelect={() => run("sign_out")}>
           <LogOut className="size-4" />
-          Logout
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

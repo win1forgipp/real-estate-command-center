@@ -148,6 +148,38 @@ Solution:
 Status:
 Fixed
 
+## REC-004
+
+Title:
+Implement core create/action buttons beyond New Transaction
+
+Priority:
+P1
+
+Category:
+Core Workflow
+
+Area:
+Global App Actions
+
+Issue:
+Core create/action buttons (Add Buyer, Add Listing, Add Contact, Schedule Showing, Add Deadline, Add Task, Add Link, Create Template, Add Commission, Add Mileage, and top-right user menu) only showed placeholder toasts or did not perform useful actions.
+
+Expected Behavior:
+Each button opens a usable modal, drawer, wizard, dropdown, or route. A toast alone does not count as working for these core actions.
+
+Implementation:
+- Added `AppActionFormsProvider` with modal forms for all listed actions.
+- Wired modal behavior in the app action handler via `dispatchAppActionEvent`.
+- Added server actions and mutations for contacts, listings, deadlines, tasks, links, and commission updates.
+- Schedule Showing saves as a task placeholder until a showings table exists.
+- Create Template and Add Mileage save to localStorage with persistence-pending messaging.
+- User menu dropdown opens Profile, Preferences, Help, and Sign out placeholder modals.
+- Updated action registry so listed actions are `implemented` with `modal` behavior.
+
+Status:
+Fixed
+
 ## Button Functionality Audit
 
 Definition: A button is **Functional** only if it performs the real expected workflow (opens the correct form/wizard/modal or navigates to a working page). A **Placeholder** intentionally shows coming-soon feedback for an unbuilt feature. **Broken** means the button should work now but only shows a placeholder or does nothing.

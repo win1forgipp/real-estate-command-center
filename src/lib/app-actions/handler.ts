@@ -1,5 +1,6 @@
 import { notify } from "@/components/design-system/notifications/toast";
 
+import { dispatchAppActionEvent } from "@/lib/app-actions/events";
 import { getAppAction, resolveActionId } from "@/lib/app-actions/registry";
 import type { AppActionContext, AppActionId } from "@/lib/app-actions/types";
 
@@ -89,7 +90,7 @@ export function executeAppAction(
         return;
       }
 
-      showPlaceholderToast("coming_soon");
+      dispatchAppActionEvent(actionId);
       return;
     }
     case "toast": {

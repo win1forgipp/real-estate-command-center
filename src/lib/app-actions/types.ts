@@ -18,6 +18,9 @@ export type AppActionId =
   | "view_deadlines"
   | "open_command_palette"
   | "open_settings"
+  | "open_profile"
+  | "open_help"
+  | "sign_out"
   | "coming_soon";
 
 export type AppActionStatus = "implemented" | "placeholder" | "disabled";
@@ -86,6 +89,9 @@ export const APP_ACTION_IDS = [
   "view_deadlines",
   "open_command_palette",
   "open_settings",
+  "open_profile",
+  "open_help",
+  "sign_out",
   "coming_soon",
 ] as const satisfies readonly AppActionId[];
 

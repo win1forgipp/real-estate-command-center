@@ -1,5 +1,7 @@
 import "server-only";
 
+import { eq } from "drizzle-orm";
+
 import { getDb } from "@/db/client";
 import { notes, transactions } from "@/db/schema";
 import type { CreateTransactionInput } from "@/features/transactions/schemas/new-transaction-schema";
@@ -60,4 +62,26 @@ export async function createTransaction(
   });
 
   return { id: transaction.id };
+}
+
+export type UpdateCommissionInput = {
+  transactionId: string;
+  commissionExpected?: number;
+  commissionReceived?: number;
+};
+
+export async function updateTransactionCommission(input: UpdateCommissionInput) {
+  const db = getDb();
+
+  const [transaction] = await db
+    .update(transactions)
+    .set({
+      commissionExpected: input.commissionExpected ?? null,
+      commissionReceived: input.commissionReceived ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(transactions.id, input.transactionId))
+    .returning();
+
+  return transaction;
 }
