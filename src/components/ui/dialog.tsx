@@ -5,6 +5,9 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import {
+  ModalFooter,
+} from "@/components/design-system/overlays/modal-footer"
 import { XIcon } from "lucide-react"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
@@ -99,21 +102,14 @@ function DialogFooter({
   showCloseButton?: boolean
 }) {
   return (
-    <div
-      data-slot="dialog-footer"
-      className={cn(
-        "-mx-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 px-5 py-4 pb-5 sm:flex-row sm:justify-end",
-        className
-      )}
-      {...props}
-    >
+    <ModalFooter className={cn(className)} {...props}>
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
           Close
         </DialogPrimitive.Close>
       )}
-    </div>
+    </ModalFooter>
   )
 }
 

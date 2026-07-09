@@ -1,6 +1,6 @@
 "use client";
 
-import { OverlayFooter } from "@/components/design-system/overlays/overlay-footer";
+import { ModalFooter } from "@/components/design-system/overlays/modal-footer";
 import {
   Dialog,
   DialogContent,
@@ -28,13 +28,15 @@ export function Modal({
 }: ModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[min(90vh,760px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="border-b border-border/70 px-5 py-4 text-left sm:px-6">
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        {children ? <div>{children}</div> : null}
-        {footer ? <OverlayFooter>{footer}</OverlayFooter> : null}
+        {children ? (
+          <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+        ) : null}
+        {footer ? <ModalFooter>{footer}</ModalFooter> : null}
       </DialogContent>
     </Dialog>
   );

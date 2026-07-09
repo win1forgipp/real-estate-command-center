@@ -4,6 +4,7 @@ import {
   DestructiveButton,
   SecondaryButton,
 } from "@/components/design-system/buttons/action-buttons";
+import { ModalFooterActions } from "@/components/design-system/overlays/modal-footer";
 import { Modal } from "@/components/design-system/overlays/modal";
 
 type DeleteDialogProps = {
@@ -32,20 +33,29 @@ export function DeleteDialog({
       title={title}
       description={description}
       footer={
-        <>
-          <SecondaryButton type="button" onClick={() => onOpenChange(false)}>
-            {cancelLabel}
-          </SecondaryButton>
-          <DestructiveButton
-            type="button"
-            onClick={() => {
-              onConfirm();
-              onOpenChange(false);
-            }}
-          >
-            {confirmLabel}
-          </DestructiveButton>
-        </>
+        <ModalFooterActions
+          secondaryAction={
+            <SecondaryButton
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={() => onOpenChange(false)}
+            >
+              {cancelLabel}
+            </SecondaryButton>
+          }
+          primaryAction={
+            <DestructiveButton
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                onConfirm();
+                onOpenChange(false);
+              }}
+            >
+              {confirmLabel}
+            </DestructiveButton>
+          }
+        />
       }
     />
   );

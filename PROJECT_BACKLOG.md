@@ -211,6 +211,33 @@ Implementation:
 Status:
 Fixed
 
+## REC-006
+
+Title:
+Standardize modal and drawer footer layout
+
+Priority:
+P2
+
+Category:
+Design System / UX
+
+Area:
+Global UI Components
+
+Issue:
+Modal and wizard footer buttons were not consistently positioned across dialogs, with varying spacing and no safe-area support.
+
+Implementation:
+- Added `ModalFooter` and `ModalFooterActions` as the single shared footer system.
+- Migrated New Transaction wizard, action form modals, confirm/delete dialogs, design-system Modal, Drawer, `DialogFooter`, and `SheetFooter`.
+- Desktop: secondary actions left, primary actions right.
+- Mobile: full-width stacked buttons with 44px touch targets and `env(safe-area-inset-bottom)` padding.
+- Documented that all future overlays must use the shared footer.
+
+Status:
+Fixed
+
 ## Button Functionality Audit
 
 Definition: A button is **Functional** only if it performs the real expected workflow (opens the correct form/wizard/modal or navigates to a working page). A **Placeholder** intentionally shows coming-soon feedback for an unbuilt feature. **Broken** means the button should work now but only shows a placeholder or does nothing.

@@ -10,7 +10,10 @@ import {
 } from "@/components/design-system/buttons/action-buttons";
 import { StatusBadge } from "@/components/design-system/badges/status-badge";
 import { notify } from "@/components/design-system/notifications/toast";
-import { OverlayFooter } from "@/components/design-system/overlays/overlay-footer";
+import {
+  ModalFooter,
+  ModalFooterActions,
+} from "@/components/design-system/overlays/modal-footer";
 import {
   Dialog,
   DialogContent,
@@ -196,12 +199,12 @@ export function NewTransactionWizard({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[min(90vh,800px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
-        <DialogHeader className="border-b border-border/70 px-5 py-4 text-left">
+        <DialogHeader className="border-b border-border/70 px-5 py-4 text-left sm:px-6">
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5">
+        <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
           {screen === "entry" ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <EntryOptionCard
@@ -245,46 +248,54 @@ export function NewTransactionWizard({
         </div>
 
         {screen === "manual" ? (
-          <OverlayFooter className="sm:justify-between">
-            <SecondaryButton
-              type="button"
-              className="w-full sm:w-auto"
-              onClick={handleBack}
-              disabled={isSubmitting}
-            >
-              Back
-            </SecondaryButton>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-              {manualStep < manualStepLabels.length ? (
-                <PrimaryButton
+          <ModalFooter>
+            <ModalFooterActions
+              secondaryAction={
+                <SecondaryButton
                   type="button"
                   className="w-full sm:w-auto"
-                  onClick={handleNext}
-                >
-                  Continue
-                </PrimaryButton>
-              ) : (
-                <PrimaryButton
-                  type="button"
-                  className="w-full sm:w-auto"
-                  onClick={handleCreate}
+                  onClick={handleBack}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Creating..." : "Create Transaction"}
-                </PrimaryButton>
-              )}
-            </div>
-          </OverlayFooter>
+                  Back
+                </SecondaryButton>
+              }
+              primaryAction={
+                manualStep < manualStepLabels.length ? (
+                  <PrimaryButton
+                    type="button"
+                    className="w-full sm:w-auto"
+                    onClick={handleNext}
+                  >
+                    Continue
+                  </PrimaryButton>
+                ) : (
+                  <PrimaryButton
+                    type="button"
+                    className="w-full sm:w-auto"
+                    onClick={handleCreate}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Creating..." : "Create Transaction"}
+                  </PrimaryButton>
+                )
+              }
+            />
+          </ModalFooter>
         ) : showBackButton ? (
-          <OverlayFooter>
-            <SecondaryButton
-              type="button"
-              className="w-full sm:w-auto"
-              onClick={handleBack}
-            >
-              Back
-            </SecondaryButton>
-          </OverlayFooter>
+          <ModalFooter>
+            <ModalFooterActions
+              secondaryAction={
+                <SecondaryButton
+                  type="button"
+                  className="w-full sm:w-auto"
+                  onClick={handleBack}
+                >
+                  Back
+                </SecondaryButton>
+              }
+            />
+          </ModalFooter>
         ) : null}
       </DialogContent>
     </Dialog>

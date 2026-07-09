@@ -46,6 +46,11 @@ export { RadioInput } from "@/components/design-system/forms/radio-input";
 
 export { Modal } from "@/components/design-system/overlays/modal";
 export { Drawer } from "@/components/design-system/overlays/drawer";
+export {
+  ModalFooter,
+  ModalFooterActions,
+  modalFooterClassName,
+} from "@/components/design-system/overlays/modal-footer";
 export { ConfirmDialog } from "@/components/design-system/overlays/confirm-dialog";
 export { DeleteDialog } from "@/components/design-system/overlays/delete-dialog";
 
