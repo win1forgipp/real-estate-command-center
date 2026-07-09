@@ -333,6 +333,35 @@ src/components/design-system/
 
 ---
 
+## Command Palette
+
+The universal command palette is the global search and action launcher for the app.
+
+```tsx
+import {
+  CommandPaletteProvider,
+  CommandPaletteTrigger,
+  useCommandPalette,
+} from "@/components/command-palette";
+```
+
+| Piece | Use when |
+|-------|----------|
+| `CommandPaletteProvider` | Mount once in app providers (already wired) |
+| `CommandPaletteTrigger` | Top bar search button with `⌘K` hint |
+| `useCommandPalette` | Open/close programmatically from feature code |
+
+**Supports:**
+- `⌘K` / `Ctrl+K` keyboard shortcut
+- Navigation to any module
+- Quick actions from page configs
+- Workspace-oriented mock record search
+- Recent commands (persisted in localStorage)
+
+Registry lives in `src/lib/command-palette/registry.ts`. Extend that file when adding new commands — do not hardcode palette items inside UI components.
+
+---
+
 ## What not to do
 
 - Do not fetch database records inside design system components

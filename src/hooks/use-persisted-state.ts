@@ -68,3 +68,31 @@ export function usePersistedBoolean(key: string, initialValue = false) {
 
   return { value, setValue: setPersistedValue, hydrated };
 }
+
+export function usePersistedState<T>(key: string, initialValue: T) {
+  const [value, setValue] = useState<T>(initialValue);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setValue(readStorage(key, initialValue));
+    setHydrated(true);
+    // Hydrate once per storage key; initialValue is only a read fallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  const setPersistedValue = useCallback(
+    (nextValue: T | ((current: T) => T)) => {
+      setValue((current) => {
+        const resolved =
+          typeof nextValue === "function"
+            ? (nextValue as (current: T) => T)(current)
+            : nextValue;
+        writeStorage(key, resolved);
+        return resolved;
+      });
+    },
+    [key],
+  );
+
+  return { value, setValue: setPersistedValue, hydrated };
+}

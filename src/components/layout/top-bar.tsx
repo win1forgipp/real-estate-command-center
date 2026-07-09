@@ -4,7 +4,7 @@ import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
-import { GlobalSearch } from "@/components/layout/global-search";
+import { CommandPaletteTrigger } from "@/components/command-palette";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { UserMenu } from "@/components/layout/user-menu";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ export function TopBar({
         </div>
 
         <div className="hidden flex-1 justify-center xl:flex">
-          <GlobalSearch />
+          <CommandPaletteTrigger />
         </div>
 
         <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ export function TopBar({
       </div>
 
       <div className="border-t border-border/60 px-4 pb-3 md:px-6 xl:hidden">
-        <GlobalSearch />
+        <CommandPaletteTrigger />
       </div>
     </header>
   );
