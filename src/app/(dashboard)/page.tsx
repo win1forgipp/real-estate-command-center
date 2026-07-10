@@ -1,4 +1,4 @@
-import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { DashboardCards } from "@/components/dashboard/dashboard-cards";
 import { PageHeader } from "@/components/layout/page-header";
 import { getDashboardOverviewCards } from "@/services/dashboard/queries";
 
@@ -14,11 +14,7 @@ export default async function DashboardPage() {
         secondaryActions={[{ actionId: "view_deadlines", variant: "outline" }]}
       />
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-        {dashboardOverviewCards.map((card) => (
-          <DashboardCard key={card.id} data={card} />
-        ))}
-      </section>
+      <DashboardCards cards={dashboardOverviewCards} />
     </div>
   );
 }

@@ -100,7 +100,8 @@ export const templateFormSchema = z.object({
 
 export const commissionFormSchema = z.object({
   transactionId: z.string().min(1, "Transaction is required"),
-  commissionExpected: z.string().optional(),
+  commissionPercentage: z.string().optional(),
+  brokerageSplitPercentage: z.string().optional(),
   commissionReceived: z.string().optional(),
 });
 
@@ -125,4 +126,13 @@ export function parseCurrencyField(value: string | undefined) {
 
   const parsed = Number(value.replace(/[^0-9.]/g, ""));
   return Number.isFinite(parsed) ? Math.round(parsed) : undefined;
+}
+
+export function parsePercentField(value: string | undefined) {
+  if (!value?.trim()) {
+    return undefined;
+  }
+
+  const parsed = Number(value.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(parsed) ? parsed : undefined;
 }

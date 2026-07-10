@@ -5,9 +5,17 @@ import { Controller } from "react-hook-form";
 import { CurrencyInput } from "@/components/design-system/forms/currency-input";
 import { DatePickerInput } from "@/components/design-system/forms/date-picker-input";
 import { DropdownInput } from "@/components/design-system/forms/dropdown-input";
+import { PercentInput } from "@/components/design-system/forms/percent-input";
+import { TransactionSelect } from "@/components/design-system/forms/entity-select";
 import { TextInput } from "@/components/design-system/forms/text-input";
 import { TextareaInput } from "@/components/design-system/forms/textarea-input";
 import { typography } from "@/lib/design-system/typography";
+import {
+  contactTypeOptions,
+  deadlineTypeOptions,
+  listingStatusOptions,
+  taskPriorityOptions,
+} from "@/lib/labels/enums";
 import type { FormOptionsData } from "@/features/app-action-forms/actions";
 import { cn } from "@/lib/utils";
 
@@ -81,13 +89,7 @@ export function ListingFormFields({ form }: FormProps<ListingValues>) {
             value={field.value}
             onValueChange={field.onChange}
             error={errors.listingStatus?.message}
-            options={[
-              { label: "Coming Soon", value: "coming_soon" },
-              { label: "Active", value: "active" },
-              { label: "Under Contract", value: "under_contract" },
-              { label: "Sold", value: "sold" },
-              { label: "Withdrawn", value: "withdrawn" },
-            ]}
+            options={[...listingStatusOptions]}
           />
         )}
       />
@@ -109,18 +111,7 @@ export function ContactFormFields({ form }: FormProps<ContactValues>) {
             value={field.value}
             onValueChange={field.onChange}
             error={errors.contactType?.message}
-            options={[
-              { label: "Buyer", value: "buyer" },
-              { label: "Seller", value: "seller" },
-              { label: "Agent", value: "agent" },
-              { label: "Lender", value: "lender" },
-              { label: "Attorney", value: "attorney" },
-              { label: "Inspector", value: "inspector" },
-              { label: "Contractor", value: "contractor" },
-              { label: "Vendor", value: "vendor" },
-              { label: "Title Company", value: "title_company" },
-              { label: "Other", value: "other" },
-            ]}
+            options={[...contactTypeOptions]}
           />
         )}
       />
@@ -196,16 +187,7 @@ export function DeadlineFormFields({ form, options }: FormProps<DeadlineValues>)
             value={field.value}
             onValueChange={field.onChange}
             error={errors.deadlineType?.message}
-            options={[
-              { label: "Inspection", value: "inspection" },
-              { label: "Financing", value: "financing" },
-              { label: "Appraisal", value: "appraisal" },
-              { label: "Closing", value: "closing" },
-              { label: "Earnest Money", value: "earnest_money" },
-              { label: "Contingency", value: "contingency" },
-              { label: "Walkthrough", value: "walkthrough" },
-              { label: "Custom", value: "custom" },
-            ]}
+            options={[...deadlineTypeOptions]}
           />
         )}
       />
@@ -232,12 +214,7 @@ export function TaskFormFields({ form, options }: FormProps<TaskValues>) {
             value={field.value}
             onValueChange={field.onChange}
             error={errors.priority?.message}
-            options={[
-              { label: "Low", value: "low" },
-              { label: "Medium", value: "medium" },
-              { label: "High", value: "high" },
-              { label: "Urgent", value: "urgent" },
-            ]}
+            options={[...taskPriorityOptions]}
           />
         )}
       />
@@ -327,28 +304,44 @@ export function CommissionFormFields({ form, options }: FormProps<CommissionValu
         name="transactionId"
         control={control}
         render={({ field }) => (
-          <DropdownInput
+          <TransactionSelect
             label="Transaction"
             value={field.value}
             onValueChange={field.onChange}
             error={errors.transactionId?.message}
-            placeholder="Select a transaction"
             options={options?.transactions ?? []}
           />
         )}
       />
       <Controller
-        name="commissionExpected"
+        name="commissionPercentage"
         control={control}
         render={({ field }) => (
-          <CurrencyInput label="Expected Commission" value={field.value} onChange={field.onChange} />
+          <PercentInput
+            label="Commission Percentage"
+            value={field.value}
+            onChange={field.onChange}
+            description="Example: 3 means 3%, not $3."
+          />
+        )}
+      />
+      <Controller
+        name="brokerageSplitPercentage"
+        control={control}
+        render={({ field }) => (
+          <PercentInput
+            label="Brokerage Split Percentage"
+            value={field.value}
+            onChange={field.onChange}
+            description="Defaults to 30%."
+          />
         )}
       />
       <Controller
         name="commissionReceived"
         control={control}
         render={({ field }) => (
-          <CurrencyInput label="Received Commission" value={field.value} onChange={field.onChange} />
+          <CurrencyInput label="Commission Received" value={field.value} onChange={field.onChange} />
         )}
       />
     </div>

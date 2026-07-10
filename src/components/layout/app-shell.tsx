@@ -3,8 +3,10 @@
 import { useState } from "react";
 
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { PermissionRouteGuard } from "@/components/layout/permission-route-guard";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/top-bar";
+import { ViewAsBanner } from "@/components/layout/view-as-banner";
 import { usePersistedBoolean } from "@/hooks/use-persisted-state";
 
 type AppShellProps = {
@@ -27,8 +29,9 @@ export function AppShell({ children }: AppShellProps) {
           onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           sidebarCollapsed={sidebarCollapsed}
         />
+        <ViewAsBanner />
         <main className="flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6">
-          {children}
+          <PermissionRouteGuard>{children}</PermissionRouteGuard>
         </main>
       </div>
     </div>

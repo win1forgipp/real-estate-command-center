@@ -5,6 +5,11 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { notes, transactions } from "@/db/schema";
 import type { CreateTransactionInput } from "@/features/transactions/schemas/new-transaction-schema";
+import {
+  calculateCommissionAmounts,
+  DEFAULT_BROKERAGE_SPLIT_BPS,
+  percentToBps,
+} from "@/lib/formatting/commission";
 
 function getSideFlags(transactionType: CreateTransactionInput["transactionType"]) {
   return {
@@ -68,18 +73,61 @@ export async function createTransaction(
 
 export type UpdateCommissionInput = {
   transactionId: string;
-  commissionExpected?: number;
+  commissionPercentage?: number;
+  brokerageSplitPercentage?: number;
   commissionReceived?: number;
 };
 
 export async function updateTransactionCommission(input: UpdateCommissionInput) {
   const db = getDb();
 
+  const [existing] = await db
+    .select()
+    .from(transactions)
+    .where(eq(transactions.id, input.transactionId))
+    .limit(1);
+
+  if (!existing) {
+    throw new Error("Transaction not found");
+  }
+
+  const commissionPercentageBps =
+    input.commissionPercentage != null
+      ? percentToBps(input.commissionPercentage)
+      : existing.commissionPercentageBps;
+  const brokerageSplitBps =
+    input.brokerageSplitPercentage != null
+      ? percentToBps(input.brokerageSplitPercentage)
+      : existing.brokerageSplitBps ?? DEFAULT_BROKERAGE_SPLIT_BPS;
+
+  let grossCommissionAmountCents = existing.grossCommissionAmountCents;
+  let brokerageFeeAmountCents = existing.brokerageFeeAmountCents;
+  let agentNetCommissionCents = existing.agentNetCommissionCents;
+  let commissionExpected = existing.commissionExpected;
+
+  if (commissionPercentageBps != null && existing.purchasePrice != null) {
+    const calculated = calculateCommissionAmounts({
+      salePriceDollars: existing.purchasePrice,
+      commissionPercentageBps,
+      brokerageSplitBps,
+    });
+
+    grossCommissionAmountCents = calculated.grossCommissionAmountCents;
+    brokerageFeeAmountCents = calculated.brokerageFeeAmountCents;
+    agentNetCommissionCents = calculated.agentNetCommissionCents;
+    commissionExpected = calculated.grossCommissionDollars;
+  }
+
   const [transaction] = await db
     .update(transactions)
     .set({
-      commissionExpected: input.commissionExpected ?? null,
-      commissionReceived: input.commissionReceived ?? null,
+      commissionPercentageBps,
+      brokerageSplitBps,
+      grossCommissionAmountCents,
+      brokerageFeeAmountCents,
+      agentNetCommissionCents,
+      commissionExpected,
+      commissionReceived: input.commissionReceived ?? existing.commissionReceived,
       updatedAt: new Date(),
     })
     .where(eq(transactions.id, input.transactionId))

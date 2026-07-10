@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import {
   Select,
   SelectContent,
@@ -8,11 +10,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormField } from "@/components/design-system/forms/form-field";
+import {
+  getOptionLabel,
+  type SelectOption,
+} from "@/lib/formatting/option-label";
+import { formatEnumLabel } from "@/lib/formatting/enum-label";
 
-type DropdownOption = {
-  label: string;
-  value: string;
-};
+export type DropdownOption = SelectOption;
 
 type DropdownInputProps = {
   label: string;
@@ -33,6 +37,15 @@ export function DropdownInput({
   onValueChange,
   options,
 }: DropdownInputProps) {
+  const selectedLabel = useMemo(() => {
+    const labelFromOptions = getOptionLabel(value, options);
+    if (labelFromOptions) {
+      return labelFromOptions;
+    }
+
+    return value ? formatEnumLabel(value) : undefined;
+  }, [options, value]);
+
   return (
     <FormField label={label} description={description} error={error}>
       <Select
@@ -44,7 +57,9 @@ export function DropdownInput({
         }}
       >
         <SelectTrigger className="min-h-11 w-full">
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder}>
+            {selectedLabel}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (

@@ -14,7 +14,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "validate:iti-upload": "tsx scripts/validate-iti-upload.ts",
     "validate:iti-openai": "tsx scripts/validate-iti-openai.ts",
-    "validate:iti-production-imports": "tsx scripts/validate-iti-production-imports.ts"
+    "validate:iti-production-imports": "tsx scripts/validate-iti-production-imports.ts",
+    "test:rec-014": "tsx --test src/lib/formatting/__tests__/rec-014.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

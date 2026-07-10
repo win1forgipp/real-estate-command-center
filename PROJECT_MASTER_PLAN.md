@@ -56,6 +56,29 @@ Visual style:
 - clear headings
 - obvious quick actions
 
+## User-Facing Naming and Capitalization Standards
+
+All user-visible text must use readable capitalization and labels. Machine values must never appear directly in the UI.
+
+### Person names
+- Use Title Case: Tim Brady, Rory Benson, John Smith
+- Capitalize the first letter of first and last names
+- Preserve valid special capitalization such as McDonald, MacArthur, O'Connor, de la Cruz, ABC Title, eXp Realty, and MKB, REALTORS®
+- For person-name inputs, capitalize each entered segment by default while allowing manual correction
+
+### Proper nouns and business names
+- Company, brokerage, city, state, title company, lender, attorney, street, and document titles use readable capitalization
+- Acronyms remain uppercase: MLS, EMD, HOA, VA, FHA, ITI, RVAR
+
+### Enum and machine values
+- `buyer_representation` displays as Buyer Representation
+- `under_contract` displays as Under Contract
+- `title_company` displays as Title Company
+- Never show UUIDs, database IDs, snake_case, or lowercase machine values in normal UI fields
+
+### Formatting scope
+Apply naming helpers on new records, imported ITI data, displayed legacy data, dropdown labels, tables, and workspace summaries without destructively rewriting valid stored capitalization.
+
 ## 4. Core Design Principle: Workspaces
 
 The Real Estate Command Center is built around Workspaces, not individual records.

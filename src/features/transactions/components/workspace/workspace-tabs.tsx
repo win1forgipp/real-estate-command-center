@@ -16,6 +16,7 @@ import { PriorityBadge } from "@/components/design-system/badges/priority-badge"
 import { CardGrid } from "@/components/design-system/layout/card-grid";
 import { StatCard } from "@/components/design-system/cards/stat-card";
 import { CurrencyDisplay } from "@/components/design-system/displays/currency-display";
+import { PercentDisplay } from "@/components/design-system/displays/percent-display";
 import { DateDisplay } from "@/components/design-system/displays/date-display";
 import { EmptyState } from "@/components/design-system/feedback/empty-state";
 import { SectionHeader } from "@/components/design-system/layout/section-header";
@@ -25,6 +26,9 @@ import { useAppAction } from "@/lib/app-actions/use-app-action";
 import { typography } from "@/lib/design-system/typography";
 import type { TransactionWorkspaceData, WorkspaceTabId } from "@/features/transactions/types";
 import { formatDateValue } from "@/features/transactions/utils/format";
+import { formatPercentFromBps } from "@/lib/formatting/commission";
+import { WORKSPACE_TAB_PERMISSIONS } from "@/lib/permissions/route-permissions";
+import { usePermissions } from "@/lib/permissions/use-permissions";
 import { cn } from "@/lib/utils";
 
 const workspaceTabs: { id: WorkspaceTabId; label: string }[] = [
@@ -163,11 +167,21 @@ function OverviewTab({ workspace }: { workspace: TransactionWorkspaceData }) {
 
       <section className="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
         <SectionHeader title="Commission Snapshot" />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p className={typography.caption}>Expected Commission</p>
+            <p className={typography.caption}>Commission Rate</p>
             <p className="mt-1 text-2xl font-semibold">
-              {workspace.transaction.commissionExpected != null ? (
+              <PercentDisplay bps={workspace.transaction.commissionPercentageBps} />
+            </p>
+          </div>
+          <div>
+            <p className={typography.caption}>Gross Commission</p>
+            <p className="mt-1 text-2xl font-semibold">
+              {workspace.transaction.grossCommissionAmountCents != null ? (
+                <CurrencyDisplay
+                  amount={Math.round(workspace.transaction.grossCommissionAmountCents / 100)}
+                />
+              ) : workspace.transaction.commissionExpected != null ? (
                 <CurrencyDisplay amount={workspace.transaction.commissionExpected} />
               ) : (
                 "—"
@@ -175,7 +189,19 @@ function OverviewTab({ workspace }: { workspace: TransactionWorkspaceData }) {
             </p>
           </div>
           <div>
-            <p className={typography.caption}>Received Commission</p>
+            <p className={typography.caption}>Estimated Agent Net</p>
+            <p className="mt-1 text-2xl font-semibold">
+              {workspace.transaction.agentNetCommissionCents != null ? (
+                <CurrencyDisplay
+                  amount={Math.round(workspace.transaction.agentNetCommissionCents / 100)}
+                />
+              ) : (
+                "—"
+              )}
+            </p>
+          </div>
+          <div>
+            <p className={typography.caption}>Commission Received</p>
             <p className="mt-1 text-2xl font-semibold">
               {workspace.transaction.commissionReceived != null ? (
                 <CurrencyDisplay amount={workspace.transaction.commissionReceived} />
@@ -392,40 +418,67 @@ function TimelineTab() {
   );
 }
 
+function formatCurrencyValue(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 function CommissionTab({ workspace }: { workspace: TransactionWorkspaceData }) {
+  const grossAmount =
+    workspace.transaction.grossCommissionAmountCents != null
+      ? Math.round(workspace.transaction.grossCommissionAmountCents / 100)
+      : workspace.transaction.commissionExpected;
+  const brokerageFee =
+    workspace.transaction.brokerageFeeAmountCents != null
+      ? Math.round(workspace.transaction.brokerageFeeAmountCents / 100)
+      : null;
+  const agentNet =
+    workspace.transaction.agentNetCommissionCents != null
+      ? Math.round(workspace.transaction.agentNetCommissionCents / 100)
+      : null;
+
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       <StatCard
         icon={DollarSign}
-        title="Expected Commission"
+        title="Commission Rate"
         value={
-          workspace.transaction.commissionExpected != null
-            ? new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-                maximumFractionDigits: 0,
-              }).format(workspace.transaction.commissionExpected)
+          workspace.transaction.commissionPercentageBps != null
+            ? formatPercentFromBps(workspace.transaction.commissionPercentageBps)
             : "—"
         }
       />
       <StatCard
         icon={DollarSign}
-        title="Received Commission"
+        title="Gross Commission"
+        value={grossAmount != null ? formatCurrencyValue(grossAmount) : "—"}
+      />
+      <StatCard
+        icon={DollarSign}
+        title="Brokerage Share"
+        value={brokerageFee != null ? formatCurrencyValue(brokerageFee) : "—"}
+        description={
+          workspace.transaction.brokerageSplitBps != null
+            ? `Split at ${(workspace.transaction.brokerageSplitBps / 100).toString()}%`
+            : undefined
+        }
+      />
+      <StatCard
+        icon={DollarSign}
+        title="Estimated Agent Net"
+        value={agentNet != null ? formatCurrencyValue(agentNet) : "—"}
+      />
+      <StatCard
+        icon={DollarSign}
+        title="Commission Received"
         value={
           workspace.transaction.commissionReceived != null
-            ? new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-                maximumFractionDigits: 0,
-              }).format(workspace.transaction.commissionReceived)
+            ? formatCurrencyValue(workspace.transaction.commissionReceived)
             : "—"
         }
-      />
-      <StatCard
-        icon={DollarSign}
-        title="Net"
-        value="—"
-        description="Net commission calculations coming soon"
       />
     </div>
   );
@@ -453,9 +506,19 @@ function AiAssistantTab() {
 
 export function WorkspaceTabs({ workspace }: WorkspaceTabsProps) {
   const [activeTab, setActiveTab] = useState<WorkspaceTabId>("overview");
+  const { can } = usePermissions();
+
+  const visibleTabs = workspaceTabs.filter((tab) => {
+    const permission = WORKSPACE_TAB_PERMISSIONS[tab.id];
+    return !permission || can(permission);
+  });
+
+  const resolvedActiveTab = visibleTabs.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : (visibleTabs[0]?.id ?? "overview");
 
   const content = useMemo(() => {
-    switch (activeTab) {
+    switch (resolvedActiveTab) {
       case "overview":
         return <OverviewTab workspace={workspace} />;
       case "tasks":
@@ -477,19 +540,19 @@ export function WorkspaceTabs({ workspace }: WorkspaceTabsProps) {
       default:
         return null;
     }
-  }, [activeTab, workspace]);
+  }, [resolvedActiveTab, workspace]);
 
   return (
     <section className="rounded-2xl border border-border/70 bg-card shadow-sm">
       <div className="flex gap-1 overflow-x-auto border-b border-border/70 p-2">
-        {workspaceTabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={cn(
               "min-h-11 shrink-0 rounded-lg px-4 text-sm font-medium transition-colors",
-              activeTab === tab.id
+              resolvedActiveTab === tab.id
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}

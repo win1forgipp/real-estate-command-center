@@ -6,10 +6,17 @@ import { ConfidenceBadge } from "@/features/transactions/components/new-transact
 import { StatusBadge } from "@/components/design-system/badges/status-badge";
 import { CurrencyInput } from "@/components/design-system/forms/currency-input";
 import { DatePickerInput } from "@/components/design-system/forms/date-picker-input";
-import { DropdownInput } from "@/components/design-system/forms/dropdown-input";
+import { EnumSelect, UserSelect } from "@/components/design-system/forms/entity-select";
+import { PercentInput } from "@/components/design-system/forms/percent-input";
 import { TextInput } from "@/components/design-system/forms/text-input";
 import { TextareaInput } from "@/components/design-system/forms/textarea-input";
 import { typography } from "@/lib/design-system/typography";
+import {
+  earnestMoneyHeldByOptions,
+  transactionStatusOptions,
+  transactionTypeOptions,
+} from "@/lib/labels/enums";
+import { formatEnumLabel } from "@/lib/formatting/enum-label";
 import type { ImportReviewInput } from "@/features/transactions/schemas/import-transaction-schema";
 import { parseCurrencyValue } from "@/features/transactions/schemas/new-transaction-schema";
 import type { ItiConfidenceLevel, ItiExtractionResult } from "@/services/iti/types";
@@ -155,15 +162,11 @@ export function IntelligentImportReview({
           name="transactionType"
           control={control}
           render={({ field }) => (
-            <DropdownInput
+            <EnumSelect
               label="Transaction Type"
               value={field.value}
               onValueChange={field.onChange}
-              options={[
-                { label: "Buyer Representation", value: "buyer" },
-                { label: "Seller Listing", value: "seller" },
-                { label: "Dual Agency", value: "dual" },
-              ]}
+              options={transactionTypeOptions}
             />
           )}
         />
@@ -171,20 +174,11 @@ export function IntelligentImportReview({
           name="transactionStatus"
           control={control}
           render={({ field }) => (
-            <DropdownInput
+            <EnumSelect
               label="Status"
               value={field.value ?? ""}
               onValueChange={field.onChange}
-              options={[
-                { label: "Prospect", value: "prospect" },
-                { label: "Under Contract", value: "under_contract" },
-                { label: "Inspection", value: "inspection" },
-                { label: "Appraisal", value: "appraisal" },
-                { label: "Financing", value: "financing" },
-                { label: "Closing", value: "closing" },
-                { label: "Closed", value: "closed" },
-                { label: "Cancelled", value: "cancelled" },
-              ]}
+              options={transactionStatusOptions}
             />
           )}
         />
@@ -192,7 +186,7 @@ export function IntelligentImportReview({
           name="assignedUserId"
           control={control}
           render={({ field }) => (
-            <DropdownInput
+            <UserSelect
               label="Assigned Agent"
               value={field.value}
               onValueChange={field.onChange}
@@ -251,15 +245,11 @@ export function IntelligentImportReview({
           name="earnestMoneyHeldBy"
           control={control}
           render={({ field }) => (
-            <DropdownInput
+            <EnumSelect
               label="Earnest Money Held By"
               value={field.value}
               onValueChange={field.onChange}
-              options={[
-                { label: "Seller's Brokerage", value: "sellers_brokerage" },
-                { label: "Buyer's Brokerage", value: "buyers_brokerage" },
-                { label: "Other", value: "other" },
-              ]}
+              options={earnestMoneyHeldByOptions}
             />
           )}
         />
@@ -276,16 +266,42 @@ export function IntelligentImportReview({
           )}
         />
         <Controller
-          name="commission"
+          name="commissionPercentage"
+          control={control}
+          render={({ field }) => (
+            <FieldRow confidence={extraction.money.commission.confidence}>
+              <PercentInput
+                label="Commission Percentage"
+                value={field.value?.toString() ?? ""}
+                onChange={(value) => field.onChange(parseCurrencyValue(value))}
+                description="Example: 3 means 3%."
+              />
+            </FieldRow>
+          )}
+        />
+        <Controller
+          name="commissionDollarAmount"
           control={control}
           render={({ field }) => (
             <FieldRow confidence={extraction.money.commission.confidence}>
               <CurrencyInput
-                label="Commission"
+                label="Commission Dollar Amount"
                 value={field.value?.toString() ?? ""}
                 onChange={(value) => field.onChange(parseCurrencyValue(value))}
+                description="Use only when the document explicitly states a dollar commission."
               />
             </FieldRow>
+          )}
+        />
+        <Controller
+          name="brokerageSplitPercentage"
+          control={control}
+          render={({ field }) => (
+            <PercentInput
+              label="Brokerage Split Percentage"
+              value={field.value?.toString() ?? "30"}
+              onChange={(value) => field.onChange(parseCurrencyValue(value))}
+            />
           )}
         />
       </Section>
@@ -320,7 +336,7 @@ export function IntelligentImportReview({
                   />
                 </div>
                 <p className="text-muted-foreground">
-                  {doc.documentType.replaceAll("_", " ")} ·{" "}
+                  {formatEnumLabel(doc.documentType)} ·{" "}
                   {doc.summary ?? "No summary available"}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">

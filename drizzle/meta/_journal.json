@@ -29,6 +29,13 @@
       "when": 1783646946599,
       "tag": "0003_absurd_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783650000000,
+      "tag": "0004_commission_percentage",
+      "breakpoints": true
     }
   ]
 }

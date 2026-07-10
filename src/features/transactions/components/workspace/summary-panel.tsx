@@ -12,6 +12,7 @@ import {
 } from "@/components/design-system/buttons/action-buttons";
 import { TransactionStatusBadge } from "@/components/design-system/badges/transaction-status-badge";
 import { CurrencyDisplay } from "@/components/design-system/displays/currency-display";
+import { PercentDisplay } from "@/components/design-system/displays/percent-display";
 import { DateDisplay } from "@/components/design-system/displays/date-display";
 import { PropertyAddress } from "@/components/design-system/displays/property-address";
 import { getActionLabel } from "@/lib/app-actions";
@@ -113,9 +114,24 @@ export function SummaryPanel({ workspace, className }: SummaryPanelProps) {
         </div>
 
         <div>
-          <dt className={typography.caption}>Expected Commission</dt>
+          <dt className={typography.caption}>Commission Rate</dt>
           <dd className="mt-1">
-            {transaction.commissionExpected != null ? (
+            {transaction.commissionPercentageBps != null ? (
+              <PercentDisplay bps={transaction.commissionPercentageBps} />
+            ) : (
+              <span className={typography.bodyMuted}>—</span>
+            )}
+          </dd>
+        </div>
+
+        <div>
+          <dt className={typography.caption}>Gross Commission</dt>
+          <dd className="mt-1">
+            {transaction.grossCommissionAmountCents != null ? (
+              <CurrencyDisplay
+                amount={Math.round(transaction.grossCommissionAmountCents / 100)}
+              />
+            ) : transaction.commissionExpected != null ? (
               <CurrencyDisplay amount={transaction.commissionExpected} />
             ) : (
               <span className={typography.bodyMuted}>—</span>

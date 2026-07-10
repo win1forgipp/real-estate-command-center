@@ -1,16 +1,11 @@
 import { z } from "zod";
 
-export const transactionTypeOptions = [
-  { label: "Buyer Representation", value: "buyer" },
-  { label: "Seller Listing", value: "seller" },
-  { label: "Dual Agency", value: "dual" },
-] as const;
-
-export const earnestMoneyHeldByOptions = [
-  { label: "Seller's Brokerage", value: "sellers_brokerage" },
-  { label: "Buyer's Brokerage", value: "buyers_brokerage" },
-  { label: "Other", value: "other" },
-] as const;
+export {
+  earnestMoneyHeldByOptions,
+  getEarnestMoneyHeldByLabel,
+  getTransactionTypeLabel,
+  transactionTypeOptions,
+} from "@/lib/labels/enums";
 
 export const newTransactionFormSchema = z
   .object({
@@ -123,23 +118,4 @@ export function formValuesToCreateInput(
     earnestMoneyHeldBy: values.earnestMoneyHeldBy,
     earnestMoneyHolderName: values.earnestMoneyHolderName?.trim() || undefined,
   });
-}
-
-export function getTransactionTypeLabel(value: NewTransactionFormValues["transactionType"]) {
-  return (
-    transactionTypeOptions.find((option) => option.value === value)?.label ?? value
-  );
-}
-
-export function getEarnestMoneyHeldByLabel(
-  value: NewTransactionFormValues["earnestMoneyHeldBy"],
-) {
-  if (!value) {
-    return "—";
-  }
-
-  return (
-    earnestMoneyHeldByOptions.find((option) => option.value === value)?.label ??
-    value
-  );
 }

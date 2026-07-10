@@ -17,6 +17,11 @@ export type TransactionDto = {
   transactionStatus: TransactionStatus;
   commissionExpected: number | null;
   commissionReceived: number | null;
+  commissionPercentageBps: number | null;
+  brokerageSplitBps: number | null;
+  grossCommissionAmountCents: number | null;
+  brokerageFeeAmountCents: number | null;
+  agentNetCommissionCents: number | null;
   lenderName: string | null;
   attorneyName: string | null;
   titleCompany: string | null;

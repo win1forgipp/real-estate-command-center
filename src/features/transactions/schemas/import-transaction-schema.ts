@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { ItiExtractionResult } from "@/services/iti/types";
+
 export const importReviewSchema = z.object({
   propertyAddress: z.string().min(1, "Property address is required"),
   city: z.string().min(1, "City is required"),
@@ -36,7 +38,9 @@ export const importReviewSchema = z.object({
     .optional(),
   earnestMoneyHolderName: z.string().optional(),
   sellerConcessions: z.number().nonnegative().optional(),
-  commission: z.number().nonnegative().optional(),
+  commissionPercentage: z.number().nonnegative().optional(),
+  commissionDollarAmount: z.number().nonnegative().optional(),
+  brokerageSplitPercentage: z.number().nonnegative().optional(),
   inspectionDeadline: z.string().optional(),
   financingDeadline: z.string().optional(),
   appraisalDeadline: z.string().optional(),
@@ -56,12 +60,45 @@ export const importReviewSchema = z.object({
 
 export type ImportReviewInput = z.infer<typeof importReviewSchema>;
 
-import type { ItiExtractionResult } from "@/services/iti/types";
+function resolveItiCommissionFields(
+  commissionValue: number | null | undefined,
+  purchasePrice: number | null | undefined,
+) {
+  if (commissionValue == null) {
+    return {
+      commissionPercentage: undefined,
+      commissionDollarAmount: undefined,
+    };
+  }
+
+  const likelyPercentage =
+    commissionValue <= 20 &&
+    purchasePrice != null &&
+    purchasePrice > 0 &&
+    commissionValue / purchasePrice < 0.25;
+
+  if (likelyPercentage) {
+    return {
+      commissionPercentage: commissionValue,
+      commissionDollarAmount: undefined,
+    };
+  }
+
+  return {
+    commissionPercentage: undefined,
+    commissionDollarAmount: commissionValue,
+  };
+}
 
 export function extractionToReviewDefaults(
   extraction: ItiExtractionResult,
   assignedUserId: string,
 ): ImportReviewInput {
+  const commissionFields = resolveItiCommissionFields(
+    extraction.money.commission.value,
+    extraction.transaction.purchasePrice.value,
+  );
+
   return {
     propertyAddress: extraction.transaction.propertyAddress.value ?? "",
     city: extraction.transaction.city.value ?? "",
@@ -86,7 +123,9 @@ export function extractionToReviewDefaults(
     earnestMoneyHeldBy: extraction.money.earnestMoneyHeldBy.value ?? undefined,
     earnestMoneyHolderName: extraction.money.earnestMoneyHolderName.value ?? undefined,
     sellerConcessions: extraction.money.sellerConcessions.value ?? undefined,
-    commission: extraction.money.commission.value ?? undefined,
+    commissionPercentage: commissionFields.commissionPercentage,
+    commissionDollarAmount: commissionFields.commissionDollarAmount,
+    brokerageSplitPercentage: 30,
     inspectionDeadline: extraction.deadlines.inspectionDeadline.value ?? undefined,
     financingDeadline: extraction.deadlines.financingDeadline.value ?? undefined,
     appraisalDeadline: extraction.deadlines.appraisalDeadline.value ?? undefined,

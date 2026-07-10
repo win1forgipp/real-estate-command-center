@@ -420,6 +420,33 @@ In Progress — awaiting production end-to-end test
 - Verify production logs show `pipeline=openai_file` with no DOMMatrix errors.
 - Mark Fixed after transaction creation succeeds with attached source documents.
 
+## REC-014
+
+Title:
+Standardize display labels, naming conventions, commission calculations, and user-role preview
+
+Priority:
+P1
+
+Category:
+Global Data Presentation / Financial Logic / Permissions UX
+
+Area:
+Global Forms, Transactions, User Menu, Roles
+
+Implementation:
+- Fixed global `DropdownInput` label resolution so selected values always display human-readable labels instead of IDs or raw enums.
+- Added shared formatting helpers (`getOptionLabel`, `formatEnumLabel`, capitalization helpers) and centralized enum option labels.
+- Added commission percentage model with basis-point storage, 30% default brokerage split, and integer-cent currency calculations.
+- Added schema migration `0004_commission_percentage.sql` for commission percentage and derived amount fields.
+- Fixed top-right user menu with controlled open state, explicit button type, and View As submenu.
+- Added centralized permissions configuration with preview roles, route guards, navigation filtering, and role-aware dashboard cards.
+- Updated ITI review screen to separate Commission Percentage, Commission Dollar Amount, and Brokerage Split Percentage.
+- Documented user-facing naming standards in `PROJECT_MASTER_PLAN.md`.
+
+Status:
+Fixed
+
 ## Button Functionality Audit
 
 Title:

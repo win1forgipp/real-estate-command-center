@@ -5,6 +5,10 @@ import { contacts, deadlines, notes, transactions } from "@/db/schema";
 import { acceptAiExtraction } from "@/services/ai-extractions/mutations";
 import { confirmDocumentsForTransaction } from "@/services/documents/mutations";
 import type { ImportReviewInput } from "@/features/transactions/schemas/import-transaction-schema";
+import {
+  calculateCommissionAmounts,
+  percentToBps,
+} from "@/lib/formatting/commission";
 
 function splitName(fullName: string) {
   const parts = fullName.trim().split(/\s+/);
@@ -46,6 +50,52 @@ function resolveTransactionStatus(
   return input.contractDate ? ("under_contract" as const) : ("prospect" as const);
 }
 
+function buildCommissionFields(review: ImportReviewInput) {
+  const brokerageSplitBps = percentToBps(review.brokerageSplitPercentage ?? 30);
+
+  if (review.commissionPercentage != null && review.purchasePrice != null) {
+    const calculated = calculateCommissionAmounts({
+      salePriceDollars: review.purchasePrice,
+      commissionPercentageBps: percentToBps(review.commissionPercentage),
+      brokerageSplitBps,
+    });
+
+    return {
+      commissionPercentageBps: calculated.commissionPercentageBps,
+      brokerageSplitBps: calculated.brokerageSplitBps,
+      grossCommissionAmountCents: calculated.grossCommissionAmountCents,
+      brokerageFeeAmountCents: calculated.brokerageFeeAmountCents,
+      agentNetCommissionCents: calculated.agentNetCommissionCents,
+      commissionExpected: calculated.grossCommissionDollars,
+    };
+  }
+
+  if (review.commissionDollarAmount != null) {
+    const grossCommissionAmountCents = review.commissionDollarAmount * 100;
+    const brokerageFeeAmountCents = Math.round(
+      (grossCommissionAmountCents * brokerageSplitBps) / 10_000,
+    );
+
+    return {
+      commissionPercentageBps: null,
+      brokerageSplitBps,
+      grossCommissionAmountCents,
+      brokerageFeeAmountCents,
+      agentNetCommissionCents: grossCommissionAmountCents - brokerageFeeAmountCents,
+      commissionExpected: review.commissionDollarAmount,
+    };
+  }
+
+  return {
+    commissionPercentageBps: null,
+    brokerageSplitBps,
+    grossCommissionAmountCents: null,
+    brokerageFeeAmountCents: null,
+    agentNetCommissionCents: null,
+    commissionExpected: null,
+  };
+}
+
 const deadlineFieldMap: Array<{
   field: keyof ImportReviewInput;
   type:
@@ -77,6 +127,7 @@ export async function createTransactionFromImport(input: {
   const { review, documentIds, extractionId, importAsArchived, documentSummaries } = input;
   const { listingSide, sellingSide } = getSideFlags(review.transactionType);
   const transactionStatus = resolveTransactionStatus(review, importAsArchived);
+  const commissionFields = buildCommissionFields(review);
 
   const [transaction] = await db
     .insert(transactions)
@@ -94,7 +145,12 @@ export async function createTransactionFromImport(input: {
       earnestMoneyHeldBy: review.earnestMoneyHeldBy ?? null,
       earnestMoneyHolderName: review.earnestMoneyHolderName ?? null,
       sellerConcessions: review.sellerConcessions ?? null,
-      commissionExpected: review.commission ?? null,
+      commissionExpected: commissionFields.commissionExpected,
+      commissionPercentageBps: commissionFields.commissionPercentageBps,
+      brokerageSplitBps: commissionFields.brokerageSplitBps,
+      grossCommissionAmountCents: commissionFields.grossCommissionAmountCents,
+      brokerageFeeAmountCents: commissionFields.brokerageFeeAmountCents,
+      agentNetCommissionCents: commissionFields.agentNetCommissionCents,
       transactionStatus,
       listingSide,
       sellingSide,

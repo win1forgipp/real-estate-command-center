@@ -46,6 +46,7 @@ import {
   listingFormSchema,
   mileageFormSchema,
   parseCurrencyField,
+  parsePercentField,
   preferencesFormSchema,
   showingFormSchema,
   taskFormSchema,
@@ -187,7 +188,8 @@ export function AppActionFormsProvider({
   const commissionForm = useValidatedForm<z.infer<typeof commissionFormSchema>>(commissionFormSchema, {
     defaultValues: {
       transactionId: "",
-      commissionExpected: "",
+      commissionPercentage: "",
+      brokerageSplitPercentage: "30",
       commissionReceived: "",
     },
   });
@@ -337,7 +339,8 @@ export function AppActionFormsProvider({
     try {
       await updateCommissionAction({
         transactionId: values.transactionId,
-        commissionExpected: parseCurrencyField(values.commissionExpected),
+        commissionPercentage: parsePercentField(values.commissionPercentage),
+        brokerageSplitPercentage: parsePercentField(values.brokerageSplitPercentage),
         commissionReceived: parseCurrencyField(values.commissionReceived),
       });
       notify.success("Commission updated", "Transaction commission fields were saved.");
