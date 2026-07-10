@@ -16,6 +16,15 @@ export {
   sanitizeItiFileName,
 } from "@/services/iti/blob-paths";
 export {
+  getBlobAccessMode,
+  hasBlobReadWriteToken,
+} from "@/services/iti/blob-config";
+export {
+  formatBlobSdkError,
+  resolveBlobAccessMode,
+} from "@/services/iti/blob-config.shared";
+export type { ItiBlobAccessMode } from "@/services/iti/blob-config.shared";
+export {
   validateBlobPathname,
   validateBlobUrl,
 } from "@/services/iti/blob-security";

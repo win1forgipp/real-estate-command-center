@@ -30,6 +30,7 @@ import {
   requestItiExtraction,
   uploadItiFileToBlob,
 } from "@/features/transactions/lib/iti-blob-upload";
+import type { ItiBlobAccessMode } from "@/services/iti/blob-config.shared";
 import type { ItiExtractionResult, ItiProcessedFileResult } from "@/services/iti/types";
 import { validateItiSelection } from "@/services/iti/upload-validation";
 import {
@@ -147,6 +148,7 @@ export function NewTransactionWizard({
   const [blobSetupError, setBlobSetupError] = useState<string | null>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [isBlobConfigured, setIsBlobConfigured] = useState(false);
+  const [blobAccessMode, setBlobAccessMode] = useState<ItiBlobAccessMode>("private");
   const [importSessionId, setImportSessionId] = useState(() => crypto.randomUUID());
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importAsArchived, setImportAsArchived] = useState(false);
@@ -221,6 +223,7 @@ export function NewTransactionWizard({
       void getItiConfigAction().then((config) => {
         setItiSetupError(config.isConfigured ? null : config.setupMessage ?? null);
         setIsBlobConfigured(config.isBlobConfigured);
+        setBlobAccessMode(config.blobAccessMode);
         setBlobSetupError(config.isBlobConfigured ? null : config.blobSetupMessage ?? null);
       });
     }
@@ -240,6 +243,7 @@ export function NewTransactionWizard({
         const uploaded = await uploadItiFileToBlob({
           file,
           importSessionId,
+          accessMode: blobAccessMode,
           onProgress: (progress) => {
             setItiFiles((previous) =>
               previous.map((entry) =>
@@ -281,7 +285,7 @@ export function NewTransactionWizard({
         );
       }
     },
-    [importSessionId],
+    [blobAccessMode, importSessionId],
   );
 
   const handleAddFiles = useCallback(

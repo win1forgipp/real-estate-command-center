@@ -3,36 +3,47 @@
 import { upload } from "@vercel/blob/client";
 
 import { buildItiBlobPathname } from "@/services/iti/blob-paths";
+import {
+  formatBlobSdkError,
+  type ItiBlobAccessMode,
+} from "@/services/iti/blob-config.shared";
 
 type UploadItiFileOptions = {
   file: File;
   importSessionId: string;
+  accessMode: ItiBlobAccessMode;
   onProgress?: (progress: number) => void;
 };
 
 export async function uploadItiFileToBlob({
   file,
   importSessionId,
+  accessMode,
   onProgress,
 }: UploadItiFileOptions) {
   const pathname = buildItiBlobPathname(importSessionId, file.name);
 
-  const blob = await upload(pathname, file, {
-    access: "public",
-    handleUploadUrl: "/api/blob/upload",
-    clientPayload: JSON.stringify({ importSessionId }),
-    onUploadProgress: (event) => {
-      onProgress?.(event.percentage);
-    },
-  });
+  try {
+    const blob = await upload(pathname, file, {
+      access: accessMode,
+      handleUploadUrl: "/api/blob/upload",
+      clientPayload: JSON.stringify({ importSessionId }),
+      onUploadProgress: (event) => {
+        onProgress?.(event.percentage);
+      },
+    });
 
-  return {
-    name: file.name,
-    url: blob.url,
-    pathname: blob.pathname,
-    mimeType: blob.contentType || file.type || "application/octet-stream",
-    size: file.size,
-  };
+    return {
+      name: file.name,
+      url: blob.url,
+      pathname: blob.pathname,
+      mimeType: blob.contentType || file.type || "application/octet-stream",
+      size: file.size,
+    };
+  } catch (error) {
+    const formatted = formatBlobSdkError(error);
+    throw new Error(`${formatted.name}: ${formatted.message}`);
+  }
 }
 
 export async function requestItiExtraction(input: {
