@@ -2,12 +2,16 @@ import "server-only";
 
 import { get } from "@vercel/blob";
 
-import { getBlobAccessMode, hasBlobReadWriteToken } from "@/services/iti/blob-config";
+import {
+  getBlobAccessMode,
+  getBlobSetupMessage,
+  isBlobConfigured,
+} from "@/services/iti/blob-config";
 import { validateBlobUrl } from "@/services/iti/blob-security";
 
 export async function fetchBlobDocumentBuffer(blobUrl: string, expectedSize?: number) {
-  if (!hasBlobReadWriteToken()) {
-    throw new Error("BLOB_READ_WRITE_TOKEN is not configured on the server.");
+  if (!isBlobConfigured()) {
+    throw new Error(getBlobSetupMessage() ?? "Vercel Blob is not configured on the server.");
   }
 
   const validation = validateBlobUrl(blobUrl);

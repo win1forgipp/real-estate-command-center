@@ -278,7 +278,7 @@ export function NewTransactionWizard({
                   error:
                     error instanceof Error
                       ? error.message
-                      : "Upload failed. Check Blob storage configuration and try again.",
+                      : "Blob upload failed.",
                 }
               : entry,
           ),
@@ -297,7 +297,7 @@ export function NewTransactionWizard({
       if (!isBlobConfigured) {
         setSelectionError(
           blobSetupError ??
-            "BLOB_READ_WRITE_TOKEN is not configured. ITI uploads require Vercel Blob storage.",
+            "Vercel Blob is not configured. Connect a Blob store to this project.",
         );
         return;
       }

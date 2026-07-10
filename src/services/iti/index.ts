@@ -17,13 +17,18 @@ export {
 } from "@/services/iti/blob-paths";
 export {
   getBlobAccessMode,
+  getBlobAuthMode,
+  getBlobSetupMessage,
+  getBlobStoreId,
   hasBlobReadWriteToken,
+  hasOidcBlobAuth,
+  isBlobConfigured,
 } from "@/services/iti/blob-config";
 export {
   formatBlobSdkError,
   resolveBlobAccessMode,
 } from "@/services/iti/blob-config.shared";
-export type { ItiBlobAccessMode } from "@/services/iti/blob-config.shared";
+export type { ItiBlobAccessMode, ItiBlobAuthMode } from "@/services/iti/blob-config.shared";
 export {
   validateBlobPathname,
   validateBlobUrl,

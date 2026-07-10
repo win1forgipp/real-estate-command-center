@@ -1,6 +1,6 @@
 "use client";
 
-import { upload } from "@vercel/blob/client";
+import { uploadPresigned } from "@vercel/blob/client";
 
 import { buildItiBlobPathname } from "@/services/iti/blob-paths";
 import {
@@ -15,6 +15,19 @@ type UploadItiFileOptions = {
   onProgress?: (progress: number) => void;
 };
 
+async function readUploadRouteError(response: Response) {
+  try {
+    const payload = (await response.json()) as { error?: string };
+    if (payload.error?.trim()) {
+      return payload.error;
+    }
+  } catch {
+    // Fall through to status-based message.
+  }
+
+  return `Blob upload authorization failed (${response.status}).`;
+}
+
 export async function uploadItiFileToBlob({
   file,
   importSessionId,
@@ -24,7 +37,7 @@ export async function uploadItiFileToBlob({
   const pathname = buildItiBlobPathname(importSessionId, file.name);
 
   try {
-    const blob = await upload(pathname, file, {
+    const blob = await uploadPresigned(pathname, file, {
       access: accessMode,
       handleUploadUrl: "/api/blob/upload",
       clientPayload: JSON.stringify({ importSessionId }),
@@ -41,6 +54,10 @@ export async function uploadItiFileToBlob({
       size: file.size,
     };
   } catch (error) {
+    if (error instanceof Response) {
+      throw new Error(await readUploadRouteError(error));
+    }
+
     const formatted = formatBlobSdkError(error);
     throw new Error(`${formatted.name}: ${formatted.message}`);
   }
@@ -70,7 +87,7 @@ export async function requestItiExtraction(input: {
   } catch {
     return {
       ok: false,
-      error: "ITI returned a non-JSON response. Try again or continue manually.",
+      error: `ITI returned a non-JSON response (${response.status}). Try again or continue manually.`,
       files: [],
     };
   }
@@ -78,12 +95,12 @@ export async function requestItiExtraction(input: {
   if (!payload || typeof payload !== "object" || !("ok" in payload)) {
     return {
       ok: false,
-      error: "ITI returned an unexpected response. Try again or continue manually.",
+      error: `ITI returned an unexpected response (${response.status}). Try again or continue manually.`,
       files: [],
     };
   }
 
-  return payload as {
+  const result = payload as {
     ok: boolean;
     error?: string;
     warning?: string | null;
@@ -93,4 +110,13 @@ export async function requestItiExtraction(input: {
     extraction?: import("@/services/iti/types").ItiExtractionResult;
     files?: import("@/services/iti/types").ItiProcessedFileResult[];
   };
+
+  if (!result.ok && !result.error) {
+    return {
+      ...result,
+      error: `ITI extraction failed (${response.status}). Try again or continue manually.`,
+    };
+  }
+
+  return result;
 }

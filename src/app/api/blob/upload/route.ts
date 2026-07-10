@@ -1,9 +1,15 @@
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { issueSignedToken } from "@vercel/blob";
+import {
+  handleUploadPresigned,
+  type HandleUploadPresignedBody,
+} from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 
 import {
   getBlobAccessMode,
-  hasBlobReadWriteToken,
+  getBlobAuthMode,
+  getBlobSetupMessage,
+  isBlobConfigured,
   logBlobUploadDiagnostic,
   toBlobRouteError,
 } from "@/services/iti/blob-config";
@@ -28,29 +34,25 @@ function parseImportSessionId(clientPayload?: string | null) {
 export async function POST(request: Request) {
   logBlobUploadDiagnostic({ phase: "reached" });
 
-  if (!hasBlobReadWriteToken()) {
+  if (!isBlobConfigured()) {
+    const setupMessage = getBlobSetupMessage() ?? "Vercel Blob is not configured.";
+
     logBlobUploadDiagnostic({
-      phase: "token-missing",
-      errorName: "BlobTokenMissing",
-      errorMessage: "BLOB_READ_WRITE_TOKEN is not configured.",
+      phase: "not-configured",
+      errorName: "BlobNotConfigured",
+      errorMessage: setupMessage,
     });
 
-    return NextResponse.json(
-      {
-        error:
-          "BLOB_READ_WRITE_TOKEN is not configured. Add it to your environment to enable ITI uploads.",
-      },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: setupMessage }, { status: 503 });
   }
 
-  const body = (await request.json()) as HandleUploadBody;
+  const body = (await request.json()) as HandleUploadPresignedBody;
 
   try {
-    const jsonResponse = await handleUpload({
+    const jsonResponse = await handleUploadPresigned({
       body,
       request,
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
+      getSignedToken: async (pathname, clientPayload) => {
         const importSessionId = parseImportSessionId(clientPayload);
 
         if (!importSessionId) {
@@ -64,11 +66,22 @@ export async function POST(request: Request) {
 
         logBlobUploadDiagnostic({ phase: "authorized" });
 
-        return {
+        const token = await issueSignedToken({
+          pathname,
+          operations: ["put"],
           allowedContentTypes: [...ITI_ALLOWED_MIME_TYPES],
           maximumSizeInBytes: ITI_MAX_FILE_SIZE_BYTES,
-          addRandomSuffix: false,
-          tokenPayload: clientPayload,
+        });
+
+        return {
+          token,
+          urlOptions: {
+            access: getBlobAccessMode(),
+            addRandomSuffix: false,
+            allowedContentTypes: [...ITI_ALLOWED_MIME_TYPES],
+            maximumSizeInBytes: ITI_MAX_FILE_SIZE_BYTES,
+            tokenPayload: clientPayload,
+          },
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
@@ -76,7 +89,9 @@ export async function POST(request: Request) {
         logBlobUploadDiagnostic({ phase: "completed" });
         console.info("[ITI Blob Upload]", {
           routeReached: true,
-          tokenConfigured: true,
+          blobClientInitialized: true,
+          storeIdDetected: true,
+          authMode: getBlobAuthMode(),
           accessMode: getBlobAccessMode(),
           phase: "upload-completed",
           importSessionId,

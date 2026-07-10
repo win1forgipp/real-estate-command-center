@@ -17,6 +17,7 @@ function isAllowedBlobHostname(hostname: string) {
   const normalized = hostname.toLowerCase();
   return (
     normalized.endsWith(".public.blob.vercel-storage.com") ||
+    normalized.endsWith(".private.blob.vercel-storage.com") ||
     normalized.endsWith(".blob.vercel-storage.com")
   );
 }

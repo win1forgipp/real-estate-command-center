@@ -1,5 +1,7 @@
 export type ItiBlobAccessMode = "public" | "private";
 
+export type ItiBlobAuthMode = "oidc" | "token" | "none";
+
 export function resolveBlobAccessMode(value?: string | null): ItiBlobAccessMode {
   const mode = value?.trim().toLowerCase();
   if (mode === "public" || mode === "private") {
