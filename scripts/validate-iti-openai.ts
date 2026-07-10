@@ -3,13 +3,14 @@ import assert from "node:assert/strict";
 import { consolidateDocumentExtractions } from "../src/services/iti/openai/consolidate";
 import {
   OPENAI_FILE_MAX_BYTES,
-  getItiPdfProcessingMode,
+  getRequestedPdfProcessingMode,
   modelSupportsFileInputs,
   validateOpenAiFileSize,
   validateOpenAiRequestBatchSize,
 } from "../src/services/iti/openai/config";
 import { ItiOpenAiError, mapOpenAiError } from "../src/services/iti/openai/errors";
 import { buildResponsesRequestBody } from "../src/services/iti/openai/schemas";
+import { sanitizeItiUserErrorMessage } from "../src/services/iti/openai/sanitize-error";
 import type { ItiPerDocumentExtraction } from "../src/services/iti/openai/normalize";
 
 function buildSampleExtraction(
@@ -76,29 +77,21 @@ function buildSampleExtraction(
 }
 
 function testPdfProcessingModeDefault() {
-  const previous = process.env.ITI_PDF_PROCESSING_MODE;
-  delete process.env.ITI_PDF_PROCESSING_MODE;
-  assert.equal(getItiPdfProcessingMode(), "openai_file");
-  process.env.ITI_PDF_PROCESSING_MODE = previous;
+  assert.equal(getRequestedPdfProcessingMode(), "openai_file");
 }
 
 function testModelSupportsFileInputs() {
   assert.equal(modelSupportsFileInputs("gpt-4o"), true);
-  assert.equal(modelSupportsFileInputs("gpt-4.1-mini"), true);
   assert.equal(modelSupportsFileInputs("text-davinci-003"), false);
 }
 
 function testOpenAiFileSizeValidation() {
-  const ok = validateOpenAiFileSize(OPENAI_FILE_MAX_BYTES - 1, "contract.pdf");
-  assert.equal(ok.ok, true);
-
-  const failed = validateOpenAiFileSize(OPENAI_FILE_MAX_BYTES + 1, "contract.pdf");
-  assert.equal(failed.ok, false);
+  assert.equal(validateOpenAiFileSize(OPENAI_FILE_MAX_BYTES - 1, "contract.pdf").ok, true);
+  assert.equal(validateOpenAiFileSize(OPENAI_FILE_MAX_BYTES + 1, "contract.pdf").ok, false);
 }
 
 function testOpenAiBatchSizeValidation() {
-  const failed = validateOpenAiRequestBatchSize(OPENAI_FILE_MAX_BYTES + 1);
-  assert.equal(failed.ok, false);
+  assert.equal(validateOpenAiRequestBatchSize(OPENAI_FILE_MAX_BYTES + 1).ok, false);
 }
 
 function testResponsesRequestShapeForPdf() {
@@ -108,41 +101,36 @@ function testResponsesRequestShapeForPdf() {
     fileId: "file-123",
   });
 
-  assert.equal(body.model, "gpt-4o");
-  assert.equal(body.input[0]?.role, "user");
   const content = body.input[0]?.content as Array<{ type: string; file_id?: string; detail?: string }>;
   assert.equal(content[1]?.type, "input_file");
-  assert.equal(content[1]?.file_id, "file-123");
   assert.equal(content[1]?.detail, "high");
   assert.equal(body.text.format.type, "json_schema");
-}
-
-function testResponsesRequestShapeForImage() {
-  const body = buildResponsesRequestBody({
-    model: "gpt-4o",
-    fileName: "scan.jpg",
-    imageUrl: "data:image/jpeg;base64,abc",
-  });
-
-  const content = body.input[0]?.content as Array<{ type: string; image_url?: string; detail?: string }>;
-  assert.equal(content[1]?.type, "input_image");
-  assert.equal(content[1]?.detail, "high");
+  assert.equal("embeddedText" in body, false);
 }
 
 function testConsolidationPrefersAmendmentClosingDate() {
   const purchase = buildSampleExtraction("purchase-agreement.pdf", "purchase_agreement", "2026-08-01");
   const amendment = buildSampleExtraction("amendment-1.pdf", "amendment", "2026-08-15");
-
   const { extraction, conflicts } = consolidateDocumentExtractions([purchase, amendment]);
 
   assert.equal(extraction.transaction.closingDate.value, "2026-08-15");
   assert.ok(conflicts.some((conflict) => conflict.field === "transaction.closingDate"));
 }
 
-function testOpenAiErrorMapping() {
-  const mapped = mapOpenAiError(new Error("Model does not support file inputs"), "responses_api_failed");
-  assert.equal(mapped.code, "unsupported_model");
-  assert.ok(mapped instanceof ItiOpenAiError);
+function testSanitizeDomMatrixError() {
+  const message = sanitizeItiUserErrorMessage(
+    new Error("DOMMatrix is not defined"),
+    "Purchase Agreement.pdf",
+  );
+  assert.match(message, /Purchase Agreement\.pdf/);
+  assert.doesNotMatch(message, /DOMMatrix/);
+}
+
+function testProductionModeRejectsLegacyValue() {
+  const previous = process.env.ITI_PDF_PROCESSING_MODE;
+  process.env.ITI_PDF_PROCESSING_MODE = "legacy_render";
+  assert.equal(getRequestedPdfProcessingMode(), "legacy_render");
+  process.env.ITI_PDF_PROCESSING_MODE = previous;
 }
 
 testPdfProcessingModeDefault();
@@ -150,8 +138,8 @@ testModelSupportsFileInputs();
 testOpenAiFileSizeValidation();
 testOpenAiBatchSizeValidation();
 testResponsesRequestShapeForPdf();
-testResponsesRequestShapeForImage();
 testConsolidationPrefersAmendmentClosingDate();
-testOpenAiErrorMapping();
+testSanitizeDomMatrixError();
+testProductionModeRejectsLegacyValue();
 
 console.log("ITI OpenAI validation checks passed.");

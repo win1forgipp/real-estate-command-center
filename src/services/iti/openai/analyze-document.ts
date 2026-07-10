@@ -9,26 +9,33 @@ import {
   type ItiRawDocumentExtraction,
   buildResponsesRequestBody,
 } from "@/services/iti/openai/schemas";
+import { sanitizeItiUserErrorMessage } from "@/services/iti/openai/sanitize-error";
 
-function parseResponsesOutput(response: OpenAI.Responses.Response) {
+function parseResponsesOutput(response: OpenAI.Responses.Response, fileName: string) {
   if (response.status === "failed") {
     throw new ItiOpenAiError(
       "responses_api_failed",
-      response.error?.message ?? "OpenAI Responses API returned a failed status.",
+      response.error?.message ??
+        `ITI could not analyze ${fileName} with OpenAI. Your uploaded file is preserved; retry when ready.`,
     );
   }
 
   const outputText = response.output_text?.trim();
   if (!outputText) {
-    throw new ItiOpenAiError("empty_model_output", "OpenAI returned an empty extraction response.");
+    throw new ItiOpenAiError(
+      "empty_model_output",
+      `ITI received an empty analysis result for ${fileName}.`,
+    );
   }
 
   try {
     return JSON.parse(outputText) as ItiRawDocumentExtraction;
   } catch (error) {
-    throw new ItiOpenAiError("validation_failed", "OpenAI returned invalid JSON for ITI extraction.", {
-      cause: error,
-    });
+    throw new ItiOpenAiError(
+      "validation_failed",
+      `ITI received an invalid structured response for ${fileName}.`,
+      { cause: error },
+    );
   }
 }
 
@@ -37,22 +44,25 @@ export async function requestStructuredDocumentExtraction(input: {
   fileName: string;
   fileId?: string;
   imageUrl?: string;
-  embeddedText?: string;
+  importSessionId?: string;
 }) {
   const model = getItiOpenAiModel();
 
   if (input.fileId && !modelSupportsFileInputs(model)) {
     throw new ItiOpenAiError(
       "unsupported_model",
-      `ITI_OPENAI_MODEL (${model}) does not support PDF file inputs. Choose a vision-capable model such as gpt-4o.`,
+      "The configured ITI model does not support PDF file inputs.",
     );
   }
 
   logItiOpenAiDiagnostic({
     stage: "responses_request_started",
+    importSessionId: input.importSessionId,
     fileName: input.fileName,
     model,
     openAiFileId: input.fileId,
+    pipeline: "openai_file",
+    provider: "openai",
   });
 
   try {
@@ -62,20 +72,22 @@ export async function requestStructuredDocumentExtraction(input: {
         fileName: input.fileName,
         fileId: input.fileId,
         imageUrl: input.imageUrl,
-        embeddedText: input.embeddedText,
       }),
     );
 
-    const parsed = parseResponsesOutput(response);
+    const parsed = parseResponsesOutput(response, input.fileName);
 
     logItiOpenAiDiagnostic({
       stage: "responses_request_succeeded",
+      importSessionId: input.importSessionId,
       fileName: input.fileName,
       model,
       openAiFileId: input.fileId,
       responseStatus: response.status,
       outputTextLength: response.output_text?.length ?? 0,
       validationStatus: "passed",
+      pipeline: "openai_file",
+      provider: "openai",
     });
 
     return parsed;
@@ -83,14 +95,20 @@ export async function requestStructuredDocumentExtraction(input: {
     const mapped = mapOpenAiError(error, "responses_api_failed");
     logItiOpenAiDiagnostic({
       stage: "responses_request_failed",
+      importSessionId: input.importSessionId,
       fileName: input.fileName,
       model,
       openAiFileId: input.fileId,
       errorName: mapped.name,
       errorCode: mapped.code,
+      errorClass: mapped.name,
       errorMessage: mapped.message,
       validationStatus: "failed",
+      pipeline: "openai_file",
+      provider: "openai",
     });
-    throw mapped;
+    throw new ItiOpenAiError(mapped.code, sanitizeItiUserErrorMessage(mapped, input.fileName), {
+      cause: error,
+    });
   }
 }

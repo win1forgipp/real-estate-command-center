@@ -6,8 +6,6 @@ const nextConfig: NextConfig = {
     "libsql",
     "@libsql/hrana-client",
     "@libsql/isomorphic-ws",
-    "pdf-parse",
-    "pdfjs-dist",
   ],
   experimental: {
     serverActions: {

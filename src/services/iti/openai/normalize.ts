@@ -1,7 +1,9 @@
 import "server-only";
 
-import { detectItiDocumentType, field } from "@/services/iti/mock-provider";
+import { detectItiDocumentType } from "@/services/iti/document-type";
+import { field } from "@/services/iti/mock-provider";
 import type { ItiRawDocumentExtraction } from "@/services/iti/openai/schemas";
+import type { ItiValidatedDocumentExtraction } from "@/services/iti/openai/validate-extraction-schema";
 import type {
   ItiConfidenceLevel,
   ItiDocumentType,
@@ -41,12 +43,12 @@ export type ItiPerDocumentExtraction = {
   money: ItiExtractionResult["money"];
   deadlines: ItiExtractionResult["deadlines"];
   serviceProviders: ItiExtractionResult["serviceProviders"];
-  processingMethod: "embedded_text" | "openai_file" | "openai_image";
+  processingMethod: "openai_file" | "openai_image";
 };
 
 export function normalizeDocumentExtraction(input: {
   fileName: string;
-  raw: ItiRawDocumentExtraction;
+  raw: ItiRawDocumentExtraction | ItiValidatedDocumentExtraction;
   processingMethod: ItiPerDocumentExtraction["processingMethod"];
 }): ItiPerDocumentExtraction {
   const documentType = (input.raw.document?.documentType ??

@@ -204,7 +204,6 @@ export function buildResponsesRequestBody(input: {
   model: string;
   fileId?: string;
   imageUrl?: string;
-  embeddedText?: string;
   fileName: string;
 }) {
   const content: Array<
@@ -229,11 +228,6 @@ export function buildResponsesRequestBody(input: {
       type: "input_image",
       image_url: input.imageUrl,
       detail: "high",
-    });
-  } else if (input.embeddedText) {
-    content.push({
-      type: "input_text",
-      text: `Embedded document text:\n${input.embeddedText}`,
     });
   }
 

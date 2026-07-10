@@ -119,12 +119,16 @@ export type ItiProviderResult = {
   rawJson: string;
 };
 
-export type ItiDocumentProcessingMethod =
-  | "embedded_text"
-  | "openai_file"
-  | "openai_image"
-  | "ocr"
-  | "vision";
+export type ItiDocumentProcessingMethod = "openai_file" | "openai_image";
+
+export type ItiPipelineDiagnostic = {
+  pipeline: "openai_file";
+  provider: "openai" | "mock";
+  model: string;
+  fileCount: number;
+  successfulFileCount: number;
+  failedFileCount: number;
+};
 
 export type ItiProcessedFileStatus =
   | "waiting"
@@ -170,6 +174,7 @@ export type RunItiExtractionResponse = {
   documentIds?: string[];
   extraction?: ItiExtractionResult;
   files?: ItiProcessedFileResult[];
+  pipeline?: ItiPipelineDiagnostic;
 };
 
 /** @deprecated Use RunItiExtractionResponse */

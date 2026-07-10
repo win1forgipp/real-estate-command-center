@@ -101,23 +101,11 @@ function formatProcessingMethod(method?: ItiDocumentProcessingMethod) {
     return null;
   }
 
-  if (method === "embedded_text") {
-    return "embedded text";
-  }
-
   if (method === "openai_file") {
     return "OpenAI PDF";
   }
 
-  if (method === "openai_image") {
-    return "OpenAI image";
-  }
-
-  if (method === "ocr") {
-    return "OCR";
-  }
-
-  return "scanned analysis";
+  return "OpenAI image";
 }
 
 type ItiUploadPanelProps = {

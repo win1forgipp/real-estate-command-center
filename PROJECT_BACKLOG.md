@@ -384,13 +384,41 @@ Implementation:
 - Specific safe errors for blob fetch, upload, model, Responses API, validation, and file-size failures.
 
 Status:
-In Progress
+Superseded by REC-013 production pipeline stabilization
 
-### REC-012 Follow-up
+## REC-012
 
-- Verify scanned purchase agreement, text-based PDF, and amendment package on production.
-- Confirm OpenAI diagnostics in Vercel logs for failed imports.
-- Mark Fixed after Review Import succeeds without server-side PDF rendering.
+Title:
+Stabilize ITI end-to-end and eliminate legacy PDF runtime dependencies
+
+Priority:
+P0
+
+Category:
+Critical Production Fix
+
+Area:
+ITI / PDF Processing / OpenAI / Vercel
+
+Root Cause:
+`extract-package.ts` still called `extractPdfEmbeddedText()` via `pdf-parse`/`pdfjs-dist` before OpenAI upload, triggering `DOMMatrix is not defined` on Vercel.
+
+Implementation:
+- Removed entire `src/services/iti/document-processing/` legacy stack from the production import graph.
+- Removed embedded-text fast path, legacy_render mode, screenshot OCR, and vision fallbacks from ITI production.
+- Added authoritative `analyzePdfWithOpenAIFile()` as the only PDF processing entry point.
+- Added Zod schema validation, production config validation, DOMMatrix-safe error sanitization, and pipeline diagnostics.
+- Removed `pdf-parse`, `pdfjs-dist`, and `@types/pdf-parse` dependencies from the project.
+- Added `validate:iti-production-imports` regression guard for banned legacy imports.
+
+Status:
+In Progress — awaiting production end-to-end test
+
+### REC-013 Follow-up
+
+- Verify scanned Purchase Agreement reaches Review Import on production.
+- Verify production logs show `pipeline=openai_file` with no DOMMatrix errors.
+- Mark Fixed after transaction creation succeeds with attached source documents.
 
 ## Button Functionality Audit
 

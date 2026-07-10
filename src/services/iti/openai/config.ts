@@ -1,4 +1,4 @@
-export type ItiPdfProcessingMode = "openai_file" | "legacy_render" | "embedded_text_only";
+export type ItiPdfProcessingMode = "openai_file";
 
 export const OPENAI_FILE_MAX_BYTES = 50 * 1024 * 1024;
 export const OPENAI_REQUEST_MAX_BYTES = 50 * 1024 * 1024;
@@ -8,11 +8,15 @@ const FILE_INPUT_MODEL_PREFIXES = ["gpt-4o", "gpt-4.1", "gpt-5", "o1", "o3", "o4
 export function getItiPdfProcessingMode(): ItiPdfProcessingMode {
   const mode = process.env.ITI_PDF_PROCESSING_MODE?.trim().toLowerCase();
 
-  if (mode === "legacy_render" || mode === "embedded_text_only") {
-    return mode;
+  if (mode && mode !== "openai_file") {
+    return "openai_file";
   }
 
   return "openai_file";
+}
+
+export function getRequestedPdfProcessingMode() {
+  return process.env.ITI_PDF_PROCESSING_MODE?.trim().toLowerCase() ?? "openai_file";
 }
 
 export function getItiOpenAiModel() {
@@ -32,7 +36,7 @@ export function validateOpenAiFileSize(fileSize: number, fileName: string) {
   if (fileSize > OPENAI_FILE_MAX_BYTES) {
     return {
       ok: false as const,
-      error: `${fileName} exceeds the OpenAI file input limit of ${Math.floor(OPENAI_FILE_MAX_BYTES / (1024 * 1024))} MB.`,
+      error: `OpenAI rejected the uploaded PDF because ${fileName} exceeded the supported file size of ${Math.floor(OPENAI_FILE_MAX_BYTES / (1024 * 1024))} MB.`,
     };
   }
 

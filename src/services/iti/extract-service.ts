@@ -1,8 +1,11 @@
 import "server-only";
 
-import { detectItiDocumentType } from "@/services/iti/document-parser";
+import { detectItiDocumentType } from "@/services/iti/document-type";
 import { logItiDev } from "@/services/iti/dev-logger";
 import { extractItiPackageWithOpenAi } from "@/services/iti/openai/extract-package";
+import { logItiOpenAiDiagnostic } from "@/services/iti/openai/diagnostics";
+import { sanitizeItiUserErrorMessage } from "@/services/iti/openai/sanitize-error";
+import { validateItiProductionConfig } from "@/services/iti/openai/validate-production-config";
 import { getItiProviderName } from "@/services/iti/provider";
 import type {
   ItiBlobFileInput,
@@ -66,6 +69,24 @@ export async function extractItiFromBlobFiles(input: {
 
     if (!importSessionId?.trim()) {
       return { ok: false, error: "Import session is missing.", provider };
+    }
+
+    logItiOpenAiDiagnostic({
+      stage: "route_entered",
+      importSessionId,
+      pipeline: "openai_file",
+      provider,
+    });
+
+    const configValidation = validateItiProductionConfig({
+      allowMock: provider === "mock",
+    });
+    if (!configValidation.ok) {
+      return {
+        ok: false,
+        error: configValidation.error,
+        provider,
+      };
     }
 
     if (!files.length) {
@@ -232,6 +253,7 @@ export async function extractItiFromBlobFiles(input: {
         error: packageResult.error,
         files: filesAfterProcessing,
         provider,
+        pipeline: packageResult.pipeline,
       };
     }
 
@@ -288,12 +310,10 @@ export async function extractItiFromBlobFiles(input: {
       files: successFiles,
       warning: warning ?? null,
       provider,
+      pipeline: packageResult.pipeline,
     };
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "ITI extraction failed unexpectedly. Try again or continue manually.";
+    const message = sanitizeItiUserErrorMessage(error);
 
     logItiDev({
       fileCount: input.files.length,

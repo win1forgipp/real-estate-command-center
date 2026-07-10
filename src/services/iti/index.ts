@@ -5,11 +5,8 @@ export {
   isItiConfigured,
   runItiExtraction,
 } from "@/services/iti/provider";
-export {
-  detectItiDocumentType,
-  getDocumentTextChunk,
-  parseUploadedBlobDocuments,
-} from "@/services/iti/document-parser";
+export { detectItiDocumentType } from "@/services/iti/document-type";
+export { getDocumentTextChunk } from "@/services/iti/document-parser";
 export { extractItiFromBlobFiles } from "@/services/iti/extract-service";
 export {
   buildItiBlobPathname,
@@ -55,6 +52,7 @@ export type {
   ItiExtractionInput,
   ItiExtractionResult,
   ItiExtractedField,
+  ItiPipelineDiagnostic,
   ItiProcessedFileResult,
   ItiUploadedDocumentMeta,
   PurchaseAgreementExtraction,

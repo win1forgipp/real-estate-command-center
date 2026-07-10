@@ -3,17 +3,10 @@ import "server-only";
 import OpenAI from "openai";
 
 import { fetchBlobDocumentBuffer } from "@/services/iti/blob-fetch";
-import { assessTextQuality } from "@/services/iti/document-processing/assess-text-quality";
-import { extractPdfEmbeddedText } from "@/services/iti/document-processing/extract-pdf-text";
-import { processDocument } from "@/services/iti/document-processing/process-document";
 import { analyzeImageFile } from "@/services/iti/openai/analyze-image";
-import { analyzePdfFile } from "@/services/iti/openai/analyze-pdf-file";
+import { analyzePdfWithOpenAIFile } from "@/services/iti/openai/analyze-pdf-with-openai-file";
 import { consolidateDocumentExtractions } from "@/services/iti/openai/consolidate";
-import {
-  getItiOpenAiModel,
-  getItiPdfProcessingMode,
-  validateOpenAiFileSize,
-} from "@/services/iti/openai/config";
+import { getItiOpenAiModel, validateOpenAiFileSize } from "@/services/iti/openai/config";
 import { logItiOpenAiDiagnostic } from "@/services/iti/openai/diagnostics";
 import { ItiOpenAiError } from "@/services/iti/openai/errors";
 import {
@@ -21,9 +14,10 @@ import {
   normalizeDocumentExtraction,
   type ItiPerDocumentExtraction,
 } from "@/services/iti/openai/normalize";
-import { deleteOpenAiFiles } from "@/services/iti/openai/upload-file";
+import { sanitizeItiUserErrorMessage } from "@/services/iti/openai/sanitize-error";
 import type {
   ItiDocumentProcessingMethod,
+  ItiPipelineDiagnostic,
   ItiProcessedFileStatus,
   ItiUploadedDocumentMeta,
 } from "@/services/iti/types";
@@ -89,34 +83,11 @@ function getOpenAiClient() {
   return new OpenAI({ apiKey });
 }
 
-async function processLegacyRenderedDocument(input: {
-  document: ItiUploadedDocumentMeta;
-  buffer: Buffer;
-}) {
-  const result = await processDocument({
-    fileName: input.document.fileName,
-    fileType: input.document.fileType,
-    buffer: input.buffer,
-    useMock: false,
-  });
-
-  return {
-    stage: "extracting_transaction_data" as const,
-    status: "parsed_successfully" as const,
-    processingMethod: result.method,
-    pageCount: result.pageCount,
-    warnings: result.warnings,
-    confidenceScore: result.confidence,
-    documentText: result.text,
-  };
-}
-
 export async function extractDocumentWithOpenAi(
   document: ItiUploadedDocumentMeta,
   options?: { useMock?: boolean },
 ): Promise<ItiDocumentProcessingOutcome> {
   const warnings: string[] = [];
-  const mode = getItiPdfProcessingMode();
 
   if (isHeicLike(document.fileName, document.fileType)) {
     return {
@@ -148,7 +119,7 @@ export async function extractDocumentWithOpenAi(
       status: "review_suggested",
       processingMethod: "openai_file",
       pageCount: 1,
-      warnings,
+      warnings: ["ITI used mock extraction data for review."],
       confidenceScore: extraction.confidenceScore,
       extraction,
     };
@@ -156,10 +127,13 @@ export async function extractDocumentWithOpenAi(
 
   logItiOpenAiDiagnostic({
     stage: "blob_fetch_started",
+    importSessionId: document.importSessionId,
     fileName: document.fileName,
     mimeType: document.fileType,
     fileSize: document.fileSize,
     model: getItiOpenAiModel(),
+    pipeline: "openai_file",
+    provider: "openai",
   });
 
   let buffer: Buffer;
@@ -168,23 +142,33 @@ export async function extractDocumentWithOpenAi(
     buffer = fetched.buffer;
     logItiOpenAiDiagnostic({
       stage: "blob_fetch_succeeded",
+      importSessionId: document.importSessionId,
       fileName: document.fileName,
       mimeType: document.fileType,
       fileSize: document.fileSize,
+      downloadedSize: buffer.byteLength,
       model: getItiOpenAiModel(),
+      pipeline: "openai_file",
+      provider: "openai",
     });
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Could not fetch the uploaded document from secure storage.";
+    const message = sanitizeItiUserErrorMessage(
+      new ItiOpenAiError(
+        "blob_fetch_failed",
+        error instanceof Error ? error.message : "Blob fetch failed.",
+      ),
+      document.fileName,
+    );
 
     logItiOpenAiDiagnostic({
       stage: "blob_fetch_failed",
+      importSessionId: document.importSessionId,
       fileName: document.fileName,
       mimeType: document.fileType,
       fileSize: document.fileSize,
       errorMessage: message,
+      pipeline: "openai_file",
+      provider: "openai",
     });
 
     return {
@@ -192,38 +176,11 @@ export async function extractDocumentWithOpenAi(
       stage: "failed",
       status: "failed",
       warnings,
-      error: `Blob fetch failure: ${message}`,
+      error: message,
     };
   }
 
-  if (mode === "legacy_render") {
-    try {
-      const legacy = await processLegacyRenderedDocument({ document, buffer });
-      warnings.push(...legacy.warnings, "Processed with legacy_render mode.");
-      return {
-        fileName: document.fileName,
-        stage: legacy.stage,
-        status: legacy.status,
-        processingMethod: legacy.processingMethod,
-        pageCount: legacy.pageCount,
-        warnings,
-        confidenceScore: legacy.confidenceScore,
-        error: "Legacy render mode produced text only. Switch to openai_file for structured extraction.",
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Legacy PDF rendering failed.";
-      return {
-        fileName: document.fileName,
-        stage: "failed",
-        status: "failed",
-        warnings,
-        error: message,
-      };
-    }
-  }
-
   const client = getOpenAiClient();
-  const openAiFileIds: string[] = [];
 
   try {
     if (isImage(document.fileName, document.fileType)) {
@@ -237,12 +194,21 @@ export async function extractDocumentWithOpenAi(
         buffer,
         fileName: document.fileName,
         mimeType,
+        importSessionId: document.importSessionId,
       });
 
       const extraction = normalizeDocumentExtraction({
         fileName: document.fileName,
         raw,
         processingMethod: "openai_image",
+      });
+
+      logItiOpenAiDiagnostic({
+        stage: "file_completed",
+        importSessionId: document.importSessionId,
+        fileName: document.fileName,
+        pipeline: "openai_file",
+        provider: "openai",
       });
 
       return {
@@ -258,52 +224,35 @@ export async function extractDocumentWithOpenAi(
     }
 
     if (isPdf(document.fileName, document.fileType)) {
-      const embedded = await extractPdfEmbeddedText(buffer);
-      const embeddedIsUsable = assessTextQuality(embedded.text).isUsable;
-      let embeddedText: string | undefined;
-
-      if (mode === "embedded_text_only") {
-        if (!embeddedIsUsable) {
-          return {
-            fileName: document.fileName,
-            stage: "failed",
-            status: "failed",
-            warnings,
-            error:
-              "Embedded PDF text was insufficient and ITI_PDF_PROCESSING_MODE is embedded_text_only.",
-          };
-        }
-
-        embeddedText = embedded.text;
-      } else if (embeddedIsUsable) {
-        embeddedText = embedded.text;
-        warnings.push("Used embedded PDF text fast-path before OpenAI structured extraction.");
-      }
-
-      const { extraction: raw, openAiFileId } = await analyzePdfFile({
+      const raw = await analyzePdfWithOpenAIFile({
         client,
         buffer,
         fileName: document.fileName,
         mimeType: document.fileType,
-        embeddedText,
+        importSessionId: document.importSessionId,
+        declaredSize: document.fileSize,
       });
-
-      if (openAiFileId) {
-        openAiFileIds.push(openAiFileId);
-      }
 
       const extraction = normalizeDocumentExtraction({
         fileName: document.fileName,
         raw,
-        processingMethod: openAiFileId ? "openai_file" : "embedded_text",
+        processingMethod: "openai_file",
+      });
+
+      logItiOpenAiDiagnostic({
+        stage: "file_completed",
+        importSessionId: document.importSessionId,
+        fileName: document.fileName,
+        pipeline: "openai_file",
+        provider: "openai",
       });
 
       return {
         fileName: document.fileName,
         stage: "review_ready",
         status: "review_suggested",
-        processingMethod: extraction.processingMethod,
-        pageCount: raw.document?.pageReferences?.length || undefined,
+        processingMethod: "openai_file",
+        pageCount: raw.document.pageReferences.length || undefined,
         warnings,
         confidenceScore: extraction.confidenceScore,
         extraction,
@@ -318,12 +267,19 @@ export async function extractDocumentWithOpenAi(
       error: "Unsupported document type for ITI OpenAI processing.",
     };
   } catch (error) {
-    const message =
-      error instanceof ItiOpenAiError
-        ? error.message
-        : error instanceof Error
-          ? error.message
-          : "ITI document analysis failed.";
+    const message = sanitizeItiUserErrorMessage(error, document.fileName);
+
+    logItiOpenAiDiagnostic({
+      stage: "file_failed",
+      importSessionId: document.importSessionId,
+      fileName: document.fileName,
+      mimeType: document.fileType,
+      fileSize: document.fileSize,
+      errorMessage: message,
+      errorClass: error instanceof Error ? error.name : "Error",
+      pipeline: "openai_file",
+      provider: "openai",
+    });
 
     return {
       fileName: document.fileName,
@@ -332,10 +288,6 @@ export async function extractDocumentWithOpenAi(
       warnings,
       error: message,
     };
-  } finally {
-    if (openAiFileIds.length) {
-      await deleteOpenAiFiles(client, openAiFileIds);
-    }
   }
 }
 
@@ -354,14 +306,31 @@ export async function extractItiPackageWithOpenAi(input: {
   }
 
   const successful = outcomes.filter((outcome) => outcome.extraction);
+  const pipeline: ItiPipelineDiagnostic = {
+    pipeline: "openai_file",
+    provider: input.useMock ? "mock" : "openai",
+    model: getItiOpenAiModel(),
+    fileCount: input.documents.length,
+    successfulFileCount: successful.length,
+    failedFileCount: outcomes.length - successful.length,
+  };
+
   if (!successful.length) {
     const firstError = outcomes.find((outcome) => outcome.error)?.error;
     return {
       ok: false as const,
       error: firstError ?? "No documents were successfully analyzed by ITI.",
       outcomes,
+      pipeline,
     };
   }
+
+  logItiOpenAiDiagnostic({
+    stage: "package_consolidation_started",
+    pipeline: pipeline.pipeline,
+    provider: pipeline.provider,
+    model: pipeline.model,
+  });
 
   const { extraction, conflicts } = consolidateDocumentExtractions(
     successful.map((outcome) => outcome.extraction as ItiPerDocumentExtraction),
@@ -379,11 +348,19 @@ export async function extractItiPackageWithOpenAi(input: {
     };
   }
 
+  logItiOpenAiDiagnostic({
+    stage: "package_consolidation_succeeded",
+    pipeline: pipeline.pipeline,
+    provider: pipeline.provider,
+    model: pipeline.model,
+  });
+
   return {
     ok: true as const,
     extraction,
     rawJson: JSON.stringify(extraction),
     outcomes,
     conflicts,
+    pipeline,
   };
 }

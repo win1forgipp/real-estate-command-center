@@ -8,7 +8,7 @@ import type {
   ItiExtractedField,
   ItiProviderResult,
 } from "@/services/iti/types";
-import { detectItiDocumentType } from "@/services/iti/document-parser";
+import { detectItiDocumentType } from "@/services/iti/document-type";
 
 function field<T = string>(
   value: T | null | undefined,
@@ -150,4 +150,4 @@ export const mockItiProvider = {
   },
 };
 
-export { field, isArchivedCandidate, detectItiDocumentType };
+export { field, isArchivedCandidate };

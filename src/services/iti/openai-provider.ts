@@ -2,7 +2,8 @@ import "server-only";
 
 import OpenAI from "openai";
 
-import { detectItiDocumentType, field, isArchivedCandidate } from "@/services/iti/mock-provider";
+import { detectItiDocumentType } from "@/services/iti/document-type";
+import { field, isArchivedCandidate } from "@/services/iti/mock-provider";
 import { ITI_SYSTEM_PROMPT } from "@/services/iti/prompts";
 import type {
   ItiExtractionInput,
