@@ -49,6 +49,7 @@ export {
 export type {
   ItiBlobFileInput,
   ItiConfidenceLevel,
+  ItiDocumentProcessingMethod,
   ItiDocumentType,
   ItiExtractRequestBody,
   ItiExtractionInput,

@@ -119,11 +119,17 @@ export type ItiProviderResult = {
   rawJson: string;
 };
 
+export type ItiDocumentProcessingMethod = "embedded_text" | "ocr" | "vision";
+
 export type ItiProcessedFileStatus =
   | "waiting"
   | "uploading"
   | "uploaded"
   | "processing"
+  | "reading_embedded_text"
+  | "ocr_required"
+  | "running_ocr"
+  | "analyzing_scanned_document"
   | "parsed_successfully"
   | "review_suggested"
   | "unknown_document"
@@ -137,6 +143,9 @@ export type ItiProcessedFileResult = {
   documentId?: string;
   documentType?: ItiDocumentType;
   confidenceScore?: number;
+  processingMethod?: ItiDocumentProcessingMethod;
+  pageCount?: number;
+  warnings?: string[];
   error?: string;
   blobUrl?: string;
   blobPathname?: string;

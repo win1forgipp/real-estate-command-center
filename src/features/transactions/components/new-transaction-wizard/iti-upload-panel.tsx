@@ -14,7 +14,7 @@ import {
   ITI_MAX_FILE_SIZE_BYTES,
   ITI_MAX_TOTAL_SIZE_BYTES,
 } from "@/services/iti/constants";
-import type { ItiDocumentType, ItiProcessedFileResult } from "@/services/iti/types";
+import type { ItiDocumentType, ItiDocumentProcessingMethod, ItiProcessedFileResult } from "@/services/iti/types";
 import { getItiPackageSummary } from "@/services/iti/upload-validation";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,10 @@ export type ItiFileStatus =
   | "uploading"
   | "uploaded"
   | "processing"
+  | "reading_embedded_text"
+  | "ocr_required"
+  | "running_ocr"
+  | "analyzing_scanned_document"
   | "parsed_successfully"
   | "review_suggested"
   | "unknown_document"
@@ -38,6 +42,9 @@ export type ItiUploadFile = {
   mimeType?: string;
   detectedDocumentType?: ItiDocumentType;
   confidenceScore?: number;
+  processingMethod?: ItiDocumentProcessingMethod;
+  pageCount?: number;
+  warnings?: string[];
   error?: string;
 };
 
@@ -46,6 +53,10 @@ const statusLabels: Record<ItiFileStatus, string> = {
   uploading: "Uploading",
   uploaded: "Uploaded",
   processing: "Processing",
+  reading_embedded_text: "Reading Embedded Text",
+  ocr_required: "OCR Required",
+  running_ocr: "Running OCR",
+  analyzing_scanned_document: "Analyzing Scanned Document",
   parsed_successfully: "Parsed Successfully",
   review_suggested: "Review Suggested",
   unknown_document: "Unknown Document",
@@ -60,11 +71,31 @@ const statusVariants: Record<
   uploading: "info",
   uploaded: "success",
   processing: "info",
+  reading_embedded_text: "info",
+  ocr_required: "warning",
+  running_ocr: "info",
+  analyzing_scanned_document: "info",
   parsed_successfully: "success",
   review_suggested: "warning",
   unknown_document: "warning",
   failed: "danger",
 };
+
+function formatProcessingMethod(method?: ItiDocumentProcessingMethod) {
+  if (!method) {
+    return null;
+  }
+
+  if (method === "embedded_text") {
+    return "embedded text";
+  }
+
+  if (method === "ocr") {
+    return "OCR";
+  }
+
+  return "scanned analysis";
+}
 
 type ItiUploadPanelProps = {
   files: ItiUploadFile[];
@@ -181,7 +212,9 @@ export function ItiUploadPanel({
         </p>
         <p className={cn(typography.caption, "mt-1")}>
           Up to {Math.floor(ITI_MAX_FILE_SIZE_BYTES / (1024 * 1024))} MB per file,{" "}
-          {Math.floor(ITI_MAX_TOTAL_SIZE_BYTES / (1024 * 1024))} MB total
+          {Math.floor(ITI_MAX_TOTAL_SIZE_BYTES / (1024 * 1024))} MB total. JPEG and PNG photos
+          are supported. HEIC/HEIF can be selected but must be converted to JPEG or PNG before
+          ITI can analyze them.
         </p>
         <input
           ref={inputRef}
@@ -249,10 +282,19 @@ export function ItiUploadPanel({
                         {entry.detectedDocumentType
                           ? ` · ${entry.detectedDocumentType.replaceAll("_", " ")}`
                           : null}
+                        {entry.processingMethod
+                          ? ` · ${formatProcessingMethod(entry.processingMethod)}`
+                          : null}
+                        {entry.pageCount != null ? ` · ${entry.pageCount} page(s)` : null}
                         {entry.confidenceScore != null
                           ? ` · ${entry.confidenceScore}% confidence`
                           : null}
                       </p>
+                      {entry.warnings?.length ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {entry.warnings.join(" ")}
+                        </p>
+                      ) : null}
                       {entry.error ? (
                         <p className="mt-1 text-xs text-destructive">{entry.error}</p>
                       ) : null}
@@ -278,7 +320,7 @@ export function ItiUploadPanel({
                       className="text-destructive"
                       onClick={() => onRemoveFile(entry.id)}
                       aria-label={`Remove ${entry.file.name}`}
-                      disabled={entry.status === "uploading" || entry.status === "processing"}
+                      disabled={entry.status === "uploading" || isItiFileExtracting(entry.status)}
                     >
                       <X className="size-4" />
                     </button>
@@ -344,6 +386,9 @@ export function applyItiProcessedFileResults(
       error: result.error,
       detectedDocumentType: result.documentType,
       confidenceScore: result.confidenceScore,
+      processingMethod: result.processingMethod,
+      pageCount: result.pageCount,
+      warnings: result.warnings,
       blobUrl: result.blobUrl ?? file.blobUrl,
       blobPathname: result.blobPathname ?? file.blobPathname,
     };
@@ -359,6 +404,16 @@ export function buildItiFileErrorMap(results?: ItiProcessedFileResult[]) {
     results
       .filter((result) => result.error)
       .map((result) => [result.fileName, result.error as string]),
+  );
+}
+
+export function isItiFileExtracting(status: ItiFileStatus) {
+  return (
+    status === "processing" ||
+    status === "reading_embedded_text" ||
+    status === "ocr_required" ||
+    status === "running_ocr" ||
+    status === "analyzing_scanned_document"
   );
 }
 

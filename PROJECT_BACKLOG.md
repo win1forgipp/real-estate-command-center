@@ -325,6 +325,39 @@ Fixed
 - Scheduled cleanup job for orphaned temporary Blob files older than 24 hours.
 - Authentication gate for Blob upload token generation before production launch.
 
+## REC-011
+
+Title:
+Add OCR and vision fallback for scanned PDFs and images
+
+Priority:
+P0
+
+Category:
+AI Core Workflow Bug
+
+Area:
+ITI / PDF Parsing / OCR
+
+Implementation:
+- Added layered document-processing pipeline under `src/services/iti/document-processing/`.
+- Stage 1 attempts embedded PDF text extraction; stage 2 renders PDF pages when text quality is insufficient.
+- Stage 3 runs OpenAI vision (`gpt-4o-mini`) on rendered pages and uploaded JPEG/PNG images server-side from private Blob content.
+- Removed the hard-stop "no readable text" failure before OCR/vision fallback is attempted.
+- Per-file processing metadata now includes method, page count, warnings, and confidence.
+- UI shows processing method and scanned-document analysis statuses.
+- HEIC/HEIF uploads are accepted but return a clear conversion message until native support is added.
+- Mock provider returns synthetic scanned-document text so local review flow still works without an API key.
+
+Status:
+In Progress
+
+### REC-011 Follow-up
+
+- Validate on production with a real scanned purchase agreement reaching Review Import.
+- Add native HEIC/HEIF conversion support.
+- Consider live per-file progress updates during long OCR/vision runs.
+
 ## Button Functionality Audit
 
 Title:

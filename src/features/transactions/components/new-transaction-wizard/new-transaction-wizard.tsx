@@ -50,6 +50,7 @@ import {
   ItiUploadPanel,
   applyItiProcessedFileResults,
   areItiFilesReadyForExtraction,
+  isItiFileExtracting,
   updateItiFileStatuses,
   type ItiUploadFile,
 } from "./iti-upload-panel";
@@ -410,7 +411,7 @@ export function NewTransactionWizard({
     setImportError(null);
     setSelectionError(null);
     setIsSubmitting(true);
-    setItiFiles(updateItiFileStatuses(itiFiles, "processing"));
+    setItiFiles(updateItiFileStatuses(itiFiles, "reading_embedded_text"));
     setScreen("import-extracting");
 
     try {
@@ -432,7 +433,7 @@ export function NewTransactionWizard({
       if (!response.ok) {
         setItiFiles((previous) =>
           previous.map((entry) =>
-            entry.status === "processing"
+            isItiFileExtracting(entry.status)
               ? { ...entry, status: "uploaded", error: response.error }
               : entry,
           ),
@@ -449,7 +450,7 @@ export function NewTransactionWizard({
       if (!response.extraction || !response.extractionId || !response.documentIds) {
         setItiFiles((previous) =>
           previous.map((entry) =>
-            entry.status === "processing"
+            isItiFileExtracting(entry.status)
               ? { ...entry, status: "uploaded", error: "Incomplete extraction response." }
               : entry,
           ),
@@ -485,7 +486,7 @@ export function NewTransactionWizard({
     } catch (error) {
       setItiFiles((previous) =>
         previous.map((entry) =>
-          entry.status === "processing"
+          isItiFileExtracting(entry.status)
             ? {
                 ...entry,
                 status: "uploaded",

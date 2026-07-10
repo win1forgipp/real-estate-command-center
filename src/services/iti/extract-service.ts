@@ -1,14 +1,12 @@
 import "server-only";
 
-import {
-  detectItiDocumentType,
-  getDocumentTextChunk,
-  parseUploadedBlobDocuments,
-} from "@/services/iti/document-parser";
+import { detectItiDocumentType } from "@/services/iti/document-parser";
+import { processUploadedBlobDocuments } from "@/services/iti/document-processing/process-document";
 import { logItiDev } from "@/services/iti/dev-logger";
 import { getItiProviderName, runItiExtraction } from "@/services/iti/provider";
 import type {
   ItiBlobFileInput,
+  ItiDocumentProcessingMethod,
   ItiProcessedFileResult,
   ItiUploadedDocumentMeta,
   RunItiExtractionResponse,
@@ -22,23 +20,43 @@ import { createDocumentRecord } from "@/services/documents/mutations";
 function toProcessedFile(
   file: ItiBlobFileInput,
   status: ItiProcessedFileResult["status"],
-  error?: string,
-  documentId?: string,
-  documentType?: ItiProcessedFileResult["documentType"],
-  confidenceScore?: number,
+  options?: {
+    error?: string;
+    documentId?: string;
+    documentType?: ItiProcessedFileResult["documentType"];
+    confidenceScore?: number;
+    processingMethod?: ItiDocumentProcessingMethod;
+    pageCount?: number;
+    warnings?: string[];
+  },
 ): ItiProcessedFileResult {
   return {
     fileName: file.name,
     fileType: file.mimeType,
     fileSize: file.size,
     status,
-    error,
-    documentId,
-    documentType,
-    confidenceScore,
+    error: options?.error,
+    documentId: options?.documentId,
+    documentType: options?.documentType,
+    confidenceScore: options?.confidenceScore,
+    processingMethod: options?.processingMethod,
+    pageCount: options?.pageCount,
+    warnings: options?.warnings,
     blobUrl: file.url,
     blobPathname: file.pathname,
   };
+}
+
+function processingStatusForMethod(method: ItiDocumentProcessingMethod): ItiProcessedFileResult["status"] {
+  if (method === "embedded_text") {
+    return "parsed_successfully";
+  }
+
+  if (method === "ocr") {
+    return "running_ocr";
+  }
+
+  return "analyzing_scanned_document";
 }
 
 export async function extractItiFromBlobFiles(input: {
@@ -91,30 +109,28 @@ export async function extractItiFromBlobFiles(input: {
       });
 
       if (!validation.ok) {
-        processedFiles.push(toProcessedFile(file, "failed", validation.error));
+        processedFiles.push(toProcessedFile(file, "failed", { error: validation.error }));
         continue;
       }
 
       if (file.size > ITI_MAX_FILE_SIZE_BYTES) {
         processedFiles.push(
-          toProcessedFile(
-            file,
-            "failed",
-            `File exceeds the ${Math.floor(ITI_MAX_FILE_SIZE_BYTES / (1024 * 1024))} MB limit.`,
-          ),
+          toProcessedFile(file, "failed", {
+            error: `File exceeds the ${Math.floor(ITI_MAX_FILE_SIZE_BYTES / (1024 * 1024))} MB limit.`,
+          }),
         );
         continue;
       }
 
       const urlValidation = validateBlobUrl(file.url);
       if (!urlValidation.ok) {
-        processedFiles.push(toProcessedFile(file, "failed", urlValidation.error));
+        processedFiles.push(toProcessedFile(file, "failed", { error: urlValidation.error }));
         continue;
       }
 
       const pathnameValidation = validateBlobPathname(file.pathname, importSessionId);
       if (!pathnameValidation.ok) {
-        processedFiles.push(toProcessedFile(file, "failed", pathnameValidation.error));
+        processedFiles.push(toProcessedFile(file, "failed", { error: pathnameValidation.error }));
         continue;
       }
 
@@ -162,7 +178,10 @@ export async function extractItiFromBlobFiles(input: {
         });
 
         processedFiles.push(
-          toProcessedFile(file, "processing", undefined, record.id, documentType),
+          toProcessedFile(file, "reading_embedded_text", {
+            documentId: record.id,
+            documentType,
+          }),
         );
       } catch (error) {
         const message =
@@ -170,7 +189,7 @@ export async function extractItiFromBlobFiles(input: {
             ? error.message
             : "Could not create a document record for this file.";
 
-        processedFiles.push(toProcessedFile(file, "failed", message));
+        processedFiles.push(toProcessedFile(file, "failed", { error: message }));
       }
     }
 
@@ -183,71 +202,68 @@ export async function extractItiFromBlobFiles(input: {
       };
     }
 
-    let documentText = "";
-    try {
-      documentText = await parseUploadedBlobDocuments(
-        storedDocuments.map((doc) => ({
-          fileName: doc.fileName,
-          fileType: doc.fileType,
-          fileSize: doc.fileSize,
-          blobUrl: doc.blobUrl,
-        })),
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Could not read text from the uploaded documents.";
+    const { documentText, results, failures } = await processUploadedBlobDocuments(
+      storedDocuments.map((doc) => ({
+        fileName: doc.fileName,
+        fileType: doc.fileType,
+        fileSize: doc.fileSize,
+        blobUrl: doc.blobUrl,
+      })),
+      { useMock: provider === "mock" },
+    );
 
-      return {
-        ok: false,
-        error: message,
-        files: processedFiles.map((file) =>
-          file.status === "processing"
-            ? { ...file, status: "failed" as const, error: message }
-            : file,
-        ),
-        provider,
-      };
-    }
+    const resultByName = new Map(results.map((result) => [result.fileName, result]));
+    const failureByName = new Map(failures.map((failure) => [failure.fileName, failure.error]));
 
-    const pdfWithoutText = storedDocuments.filter((doc) => {
-      const isPdf =
-        doc.fileType === "application/pdf" || doc.fileName.toLowerCase().endsWith(".pdf");
-
-      if (!isPdf) {
-        return false;
+    const filesAfterProcessing = processedFiles.map((file) => {
+      if (file.status === "failed") {
+        return file;
       }
 
-      return getDocumentTextChunk(documentText, doc.fileName).length === 0;
+      const failure = failureByName.get(file.fileName);
+      if (failure) {
+        return {
+          ...file,
+          status: "failed" as const,
+          error: failure,
+        };
+      }
+
+      const processingResult = resultByName.get(file.fileName);
+      if (!processingResult) {
+        return file;
+      }
+
+      return {
+        ...file,
+        status: processingStatusForMethod(processingResult.method),
+        processingMethod: processingResult.method,
+        pageCount: processingResult.pageCount,
+        warnings: processingResult.warnings,
+        confidenceScore: processingResult.confidence,
+      };
     });
 
-    if (provider === "openai" && pdfWithoutText.length === storedDocuments.length) {
+    if (!results.length) {
       return {
         ok: false,
         error:
-          "Could not extract readable text from the uploaded PDFs. Try a text-based PDF or continue manually.",
-        files: processedFiles.map((file) =>
-          file.status === "processing"
-            ? {
-                ...file,
-                status: "failed" as const,
-                error: "No readable text extracted from this PDF.",
-              }
-            : file,
-        ),
+          "ITI could not read any uploaded documents after both text extraction and scanned-document analysis.",
+        files: filesAfterProcessing,
         provider,
       };
     }
 
+    const successfulDocuments = storedDocuments.filter((doc) => resultByName.has(doc.fileName));
+
     const { extraction, rawJson } = await runItiExtraction({
-      documents: storedDocuments,
+      documents: successfulDocuments,
       documentText,
       useMock: provider === "mock",
     });
 
     const extractionRecord = await createAiExtractionRecord({
-      sourceDocumentIds: documentIds,
+      sourceDocumentIds: successfulDocuments.map((doc) => doc.id),
       extractedJson: rawJson,
       confidenceScore: extraction.overallConfidence,
     });
@@ -256,13 +272,15 @@ export async function extractItiFromBlobFiles(input: {
       provider === "mock"
         ? extraction.setupMessage ??
           "OPENAI_API_KEY is not configured. ITI used mock extraction data for review."
-        : undefined;
+        : failures.length
+          ? `${failures.length} file(s) could not be read. ITI continued with the remaining documents.`
+          : undefined;
 
     const extractedDocByName = new Map(
       extraction.documents.map((doc) => [doc.fileName, doc]),
     );
 
-    const successFiles = processedFiles.map((file) => {
+    const successFiles = filesAfterProcessing.map((file) => {
       if (file.status === "failed") {
         return file;
       }
@@ -273,7 +291,7 @@ export async function extractItiFromBlobFiles(input: {
       return {
         ...file,
         documentType: extracted?.documentType ?? file.documentType,
-        confidenceScore: extracted?.confidenceScore,
+        confidenceScore: extracted?.confidenceScore ?? file.confidenceScore,
         status: isUnknown ? ("unknown_document" as const) : ("review_suggested" as const),
       };
     });
@@ -290,7 +308,7 @@ export async function extractItiFromBlobFiles(input: {
     return {
       ok: true,
       extractionId: extractionRecord.id,
-      documentIds,
+      documentIds: successfulDocuments.map((doc) => doc.id),
       extraction,
       files: successFiles,
       warning: warning ?? null,

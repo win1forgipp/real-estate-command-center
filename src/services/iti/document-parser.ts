@@ -1,6 +1,7 @@
 import "server-only";
 
 import { fetchBlobDocumentBuffer } from "@/services/iti/blob-fetch";
+import { processDocument, processUploadedBlobDocuments } from "@/services/iti/document-processing/process-document";
 import type { ItiDocumentType } from "@/services/iti/types";
 
 export function detectItiDocumentType(fileName: string): ItiDocumentType {
@@ -34,30 +35,33 @@ export function detectItiDocumentType(fileName: string): ItiDocumentType {
   return "other";
 }
 
-export async function parseDocumentTextFromBuffer(buffer: Buffer, fileType: string) {
-  if (fileType.startsWith("image/")) {
-    return "[Image uploaded. OCR not enabled in ITI v1.]";
-  }
-
-  try {
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: buffer });
-    const textResult = await parser.getText();
-    await parser.destroy();
-    return textResult.text?.trim() || "";
-  } catch {
-    return "";
-  }
+export async function parseDocumentTextFromBuffer(
+  buffer: Buffer,
+  fileType: string,
+  fileName = "document",
+  options?: { useMock?: boolean },
+) {
+  const result = await processDocument({
+    fileName,
+    fileType,
+    buffer,
+    useMock: options?.useMock,
+  });
+  return result.text;
 }
 
-export async function parseDocumentTextFromBlob(blobUrl: string, fileType: string, fileSize: number) {
-  if (fileType.startsWith("image/")) {
-    return "[Image uploaded. OCR not enabled in ITI v1.]";
-  }
-
+export async function parseDocumentTextFromBlob(
+  blobUrl: string,
+  fileType: string,
+  fileSize: number,
+  fileName = "document",
+  options?: { useMock?: boolean },
+) {
   const { buffer } = await fetchBlobDocumentBuffer(blobUrl, fileSize);
-  return parseDocumentTextFromBuffer(buffer, fileType);
+  return parseDocumentTextFromBuffer(buffer, fileType, fileName, options);
 }
+
+export { processUploadedBlobDocuments };
 
 export async function parseUploadedBlobDocuments(
   files: {
@@ -66,18 +70,10 @@ export async function parseUploadedBlobDocuments(
     fileSize: number;
     blobUrl: string;
   }[],
+  options?: { useMock?: boolean },
 ) {
-  const chunks = await Promise.all(
-    files.map(async (file) => {
-      const text = await parseDocumentTextFromBlob(
-        file.blobUrl,
-        file.fileType,
-        file.fileSize,
-      );
-      return `--- ${file.fileName} ---\n${text}`;
-    }),
-  );
-  return chunks.join("\n\n");
+  const { documentText } = await processUploadedBlobDocuments(files, options);
+  return documentText;
 }
 
 function getDocumentTextChunk(documentText: string, fileName: string) {
