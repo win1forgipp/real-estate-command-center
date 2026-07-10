@@ -411,7 +411,7 @@ export function NewTransactionWizard({
     setImportError(null);
     setSelectionError(null);
     setIsSubmitting(true);
-    setItiFiles(updateItiFileStatuses(itiFiles, "reading_embedded_text"));
+    setItiFiles(updateItiFileStatuses(itiFiles, "fetching_document"));
     setScreen("import-extracting");
 
     try {

@@ -350,13 +350,47 @@ Implementation:
 - Mock provider returns synthetic scanned-document text so local review flow still works without an API key.
 
 Status:
-In Progress
+Superseded by REC-012 native PDF file processing
 
 ### REC-011 Follow-up
 
 - Validate on production with a real scanned purchase agreement reaching Review Import.
 - Add native HEIC/HEIF conversion support.
 - Consider live per-file progress updates during long OCR/vision runs.
+
+## REC-012
+
+Title:
+Use native OpenAI PDF file inputs for ITI
+
+Priority:
+P0
+
+Category:
+AI Core Workflow Fix
+
+Area:
+ITI / OpenAI / Document Processing
+
+Implementation:
+- Added `src/services/iti/openai/` modules for OpenAI Files API upload, Responses API `input_file` analysis, image analysis, consolidation, and diagnostics.
+- PDFs now use private Blob fetch → OpenAI `user_data` upload → Responses API structured extraction in one request.
+- JPEG/PNG use Responses API `input_image` with the same structured schema.
+- Embedded PDF text remains an optional fast-path before native PDF upload when `ITI_PDF_PROCESSING_MODE=openai_file`.
+- Legacy `pdf-parse` screenshot rendering is gated behind `ITI_PDF_PROCESSING_MODE=legacy_render` only.
+- Multiple documents are processed individually, then merged with amendment/addendum override logic and conflict retention.
+- Temporary OpenAI file ids are deleted after extraction; Vercel Blob documents are retained.
+- Configurable `ITI_OPENAI_MODEL` and per-file diagnostics without logging document contents.
+- Specific safe errors for blob fetch, upload, model, Responses API, validation, and file-size failures.
+
+Status:
+In Progress
+
+### REC-012 Follow-up
+
+- Verify scanned purchase agreement, text-based PDF, and amendment package on production.
+- Confirm OpenAI diagnostics in Vercel logs for failed imports.
+- Mark Fixed after Review Import succeeds without server-side PDF rendering.
 
 ## Button Functionality Audit
 

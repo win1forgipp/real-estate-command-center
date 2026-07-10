@@ -1,6 +1,7 @@
 import "server-only";
 
 import { fetchBlobDocumentBuffer } from "@/services/iti/blob-fetch";
+import { getItiPdfProcessingMode } from "@/services/iti/openai/config";
 import { assessTextQuality } from "@/services/iti/document-processing/assess-text-quality";
 import { MAX_VISION_PAGES } from "@/services/iti/document-processing/constants";
 import { extractImageWithVision, extractWithVision } from "@/services/iti/document-processing/extract-with-vision";
@@ -109,6 +110,12 @@ export async function processDocument(input: {
     }
 
     warnings.push("Embedded PDF text was insufficient; running scanned-document analysis.");
+
+    if (getItiPdfProcessingMode() !== "legacy_render") {
+      throw new Error(
+        "Scanned PDF rendering is disabled. Set ITI_PDF_PROCESSING_MODE=legacy_render for diagnostics or use openai_file in production.",
+      );
+    }
 
     const pages = await renderPdfPages(input.buffer, { maxPages: MAX_VISION_PAGES });
     if (!pages.length) {

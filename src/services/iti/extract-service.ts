@@ -1,12 +1,11 @@
 import "server-only";
 
 import { detectItiDocumentType } from "@/services/iti/document-parser";
-import { processUploadedBlobDocuments } from "@/services/iti/document-processing/process-document";
 import { logItiDev } from "@/services/iti/dev-logger";
-import { getItiProviderName, runItiExtraction } from "@/services/iti/provider";
+import { extractItiPackageWithOpenAi } from "@/services/iti/openai/extract-package";
+import { getItiProviderName } from "@/services/iti/provider";
 import type {
   ItiBlobFileInput,
-  ItiDocumentProcessingMethod,
   ItiProcessedFileResult,
   ItiUploadedDocumentMeta,
   RunItiExtractionResponse,
@@ -25,7 +24,7 @@ function toProcessedFile(
     documentId?: string;
     documentType?: ItiProcessedFileResult["documentType"];
     confidenceScore?: number;
-    processingMethod?: ItiDocumentProcessingMethod;
+    processingMethod?: ItiProcessedFileResult["processingMethod"];
     pageCount?: number;
     warnings?: string[];
   },
@@ -45,18 +44,6 @@ function toProcessedFile(
     blobUrl: file.url,
     blobPathname: file.pathname,
   };
-}
-
-function processingStatusForMethod(method: ItiDocumentProcessingMethod): ItiProcessedFileResult["status"] {
-  if (method === "embedded_text") {
-    return "parsed_successfully";
-  }
-
-  if (method === "ocr") {
-    return "running_ocr";
-  }
-
-  return "analyzing_scanned_document";
 }
 
 export async function extractItiFromBlobFiles(input: {
@@ -147,7 +134,6 @@ export async function extractItiFromBlobFiles(input: {
     }
 
     const storedDocuments: ItiUploadedDocumentMeta[] = [];
-    const documentIds: string[] = [];
 
     for (const file of validFiles) {
       try {
@@ -164,7 +150,6 @@ export async function extractItiFromBlobFiles(input: {
           processingStatus: "temporary",
         });
 
-        documentIds.push(record.id);
         storedDocuments.push({
           id: record.id,
           fileName: file.name,
@@ -178,7 +163,7 @@ export async function extractItiFromBlobFiles(input: {
         });
 
         processedFiles.push(
-          toProcessedFile(file, "reading_embedded_text", {
+          toProcessedFile(file, "fetching_document", {
             documentId: record.id,
             documentType,
           }),
@@ -202,96 +187,86 @@ export async function extractItiFromBlobFiles(input: {
       };
     }
 
-    const { documentText, results, failures } = await processUploadedBlobDocuments(
-      storedDocuments.map((doc) => ({
-        fileName: doc.fileName,
-        fileType: doc.fileType,
-        fileSize: doc.fileSize,
-        blobUrl: doc.blobUrl,
-      })),
-      { useMock: provider === "mock" },
-    );
+    const packageResult = await extractItiPackageWithOpenAi({
+      documents: storedDocuments,
+      useMock: provider === "mock",
+    });
 
-    const resultByName = new Map(results.map((result) => [result.fileName, result]));
-    const failureByName = new Map(failures.map((failure) => [failure.fileName, failure.error]));
+    const outcomeByName = new Map(
+      packageResult.outcomes.map((outcome) => [outcome.fileName, outcome]),
+    );
 
     const filesAfterProcessing = processedFiles.map((file) => {
       if (file.status === "failed") {
         return file;
       }
 
-      const failure = failureByName.get(file.fileName);
-      if (failure) {
+      const outcome = outcomeByName.get(file.fileName);
+      if (!outcome) {
+        return file;
+      }
+
+      if (outcome.error) {
         return {
           ...file,
           status: "failed" as const,
-          error: failure,
+          error: outcome.error,
+          warnings: outcome.warnings,
         };
-      }
-
-      const processingResult = resultByName.get(file.fileName);
-      if (!processingResult) {
-        return file;
       }
 
       return {
         ...file,
-        status: processingStatusForMethod(processingResult.method),
-        processingMethod: processingResult.method,
-        pageCount: processingResult.pageCount,
-        warnings: processingResult.warnings,
-        confidenceScore: processingResult.confidence,
+        status: outcome.status,
+        processingMethod: outcome.processingMethod,
+        pageCount: outcome.pageCount,
+        warnings: outcome.warnings,
+        confidenceScore: outcome.confidenceScore,
+        documentType: outcome.extraction?.documentType ?? file.documentType,
       };
     });
 
-    if (!results.length) {
+    if (!packageResult.ok) {
       return {
         ok: false,
-        error:
-          "ITI could not read any uploaded documents after both text extraction and scanned-document analysis.",
+        error: packageResult.error,
         files: filesAfterProcessing,
         provider,
       };
     }
 
-    const successfulDocuments = storedDocuments.filter((doc) => resultByName.has(doc.fileName));
-
-    const { extraction, rawJson } = await runItiExtraction({
-      documents: successfulDocuments,
-      documentText,
-      useMock: provider === "mock",
-    });
+    const successfulDocuments = storedDocuments.filter((doc) =>
+      packageResult.outcomes.some(
+        (outcome) => outcome.fileName === doc.fileName && outcome.extraction,
+      ),
+    );
 
     const extractionRecord = await createAiExtractionRecord({
       sourceDocumentIds: successfulDocuments.map((doc) => doc.id),
-      extractedJson: rawJson,
-      confidenceScore: extraction.overallConfidence,
+      extractedJson: packageResult.rawJson,
+      confidenceScore: packageResult.extraction.overallConfidence,
     });
 
+    const failedCount = packageResult.outcomes.filter((outcome) => outcome.error).length;
     const warning =
       provider === "mock"
-        ? extraction.setupMessage ??
-          "OPENAI_API_KEY is not configured. ITI used mock extraction data for review."
-        : failures.length
-          ? `${failures.length} file(s) could not be read. ITI continued with the remaining documents.`
-          : undefined;
-
-    const extractedDocByName = new Map(
-      extraction.documents.map((doc) => [doc.fileName, doc]),
-    );
+        ? "OPENAI_API_KEY is not configured. ITI used mock extraction data for review."
+        : failedCount > 0
+          ? `${failedCount} file(s) could not be analyzed. ITI continued with the remaining documents.`
+          : packageResult.conflicts.length > 0
+            ? `${packageResult.conflicts.length} field conflict(s) were detected across uploaded documents. Review the merged values carefully.`
+            : undefined;
 
     const successFiles = filesAfterProcessing.map((file) => {
       if (file.status === "failed") {
         return file;
       }
 
-      const extracted = extractedDocByName.get(file.fileName);
-      const isUnknown = extracted?.documentType === "other";
+      const outcome = outcomeByName.get(file.fileName);
+      const isUnknown = outcome?.extraction?.documentType === "other";
 
       return {
         ...file,
-        documentType: extracted?.documentType ?? file.documentType,
-        confidenceScore: extracted?.confidenceScore ?? file.confidenceScore,
         status: isUnknown ? ("unknown_document" as const) : ("review_suggested" as const),
       };
     });
@@ -309,7 +284,7 @@ export async function extractItiFromBlobFiles(input: {
       ok: true,
       extractionId: extractionRecord.id,
       documentIds: successfulDocuments.map((doc) => doc.id),
-      extraction,
+      extraction: packageResult.extraction,
       files: successFiles,
       warning: warning ?? null,
       provider,

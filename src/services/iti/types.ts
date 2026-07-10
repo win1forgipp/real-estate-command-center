@@ -119,18 +119,28 @@ export type ItiProviderResult = {
   rawJson: string;
 };
 
-export type ItiDocumentProcessingMethod = "embedded_text" | "ocr" | "vision";
+export type ItiDocumentProcessingMethod =
+  | "embedded_text"
+  | "openai_file"
+  | "openai_image"
+  | "ocr"
+  | "vision";
 
 export type ItiProcessedFileStatus =
   | "waiting"
   | "uploading"
   | "uploaded"
   | "processing"
+  | "fetching_document"
+  | "sending_to_iti"
+  | "analyzing_pdf"
+  | "extracting_transaction_data"
   | "reading_embedded_text"
   | "ocr_required"
   | "running_ocr"
   | "analyzing_scanned_document"
   | "parsed_successfully"
+  | "review_ready"
   | "review_suggested"
   | "unknown_document"
   | "failed";

@@ -23,11 +23,16 @@ export type ItiFileStatus =
   | "uploading"
   | "uploaded"
   | "processing"
+  | "fetching_document"
+  | "sending_to_iti"
+  | "analyzing_pdf"
+  | "extracting_transaction_data"
   | "reading_embedded_text"
   | "ocr_required"
   | "running_ocr"
   | "analyzing_scanned_document"
   | "parsed_successfully"
+  | "review_ready"
   | "review_suggested"
   | "unknown_document"
   | "failed";
@@ -53,11 +58,16 @@ const statusLabels: Record<ItiFileStatus, string> = {
   uploading: "Uploading",
   uploaded: "Uploaded",
   processing: "Processing",
+  fetching_document: "Fetching Document",
+  sending_to_iti: "Sending to ITI",
+  analyzing_pdf: "Analyzing PDF",
+  extracting_transaction_data: "Extracting Transaction Data",
   reading_embedded_text: "Reading Embedded Text",
   ocr_required: "OCR Required",
   running_ocr: "Running OCR",
   analyzing_scanned_document: "Analyzing Scanned Document",
   parsed_successfully: "Parsed Successfully",
+  review_ready: "Review Ready",
   review_suggested: "Review Suggested",
   unknown_document: "Unknown Document",
   failed: "Failed",
@@ -71,11 +81,16 @@ const statusVariants: Record<
   uploading: "info",
   uploaded: "success",
   processing: "info",
+  fetching_document: "info",
+  sending_to_iti: "info",
+  analyzing_pdf: "info",
+  extracting_transaction_data: "info",
   reading_embedded_text: "info",
   ocr_required: "warning",
   running_ocr: "info",
   analyzing_scanned_document: "info",
   parsed_successfully: "success",
+  review_ready: "success",
   review_suggested: "warning",
   unknown_document: "warning",
   failed: "danger",
@@ -88,6 +103,14 @@ function formatProcessingMethod(method?: ItiDocumentProcessingMethod) {
 
   if (method === "embedded_text") {
     return "embedded text";
+  }
+
+  if (method === "openai_file") {
+    return "OpenAI PDF";
+  }
+
+  if (method === "openai_image") {
+    return "OpenAI image";
   }
 
   if (method === "ocr") {
@@ -410,6 +433,10 @@ export function buildItiFileErrorMap(results?: ItiProcessedFileResult[]) {
 export function isItiFileExtracting(status: ItiFileStatus) {
   return (
     status === "processing" ||
+    status === "fetching_document" ||
+    status === "sending_to_iti" ||
+    status === "analyzing_pdf" ||
+    status === "extracting_transaction_data" ||
     status === "reading_embedded_text" ||
     status === "ocr_required" ||
     status === "running_ocr" ||
