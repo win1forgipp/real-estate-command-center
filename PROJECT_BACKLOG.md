@@ -269,6 +269,30 @@ Fixed
 - OCR for image uploads.
 - Wire workspace Upload Purchase Agreement action to open ITI directly on transactions page via event (route fallback exists).
 
+## REC-008
+
+Title:
+Fix ITI upload server response handling
+
+Priority:
+P0
+
+Category:
+Bug
+
+Area:
+ITI / File Upload / Server Action
+
+Implementation:
+- Server action now always returns a predictable `{ ok, error?, extraction?, files?, warning?, provider? }` shape instead of throwing.
+- Increased Next.js server action and proxy body limits to 25mb for multi-PDF uploads.
+- Mock extraction fallback when `OPENAI_API_KEY` is missing returns `ok: true` with a warning.
+- Added dev-only ITI logging for file counts, names, types, sizes, provider, and status.
+- Frontend shows server and file-level errors, preserves selected files, and supports Retry ITI.
+
+Status:
+Fixed
+
 ## Button Functionality Audit
 
 Definition: A button is **Functional** only if it performs the real expected workflow (opens the correct form/wizard/modal or navigates to a working page). A **Placeholder** intentionally shows coming-soon feedback for an unbuilt feature. **Broken** means the button should work now but only shows a placeholder or does nothing.

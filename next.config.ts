@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
     "pdf-parse",
     "pdfjs-dist",
   ],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "25mb",
+    },
+    // Next.js 15.5+ proxy can truncate multipart uploads unless this matches bodySizeLimit.
+    // Types may lag behind the runtime option.
+    ...({ proxyClientMaxBodySize: "25mb" } as Record<string, string>),
+  },
 };
 
 export default nextConfig;

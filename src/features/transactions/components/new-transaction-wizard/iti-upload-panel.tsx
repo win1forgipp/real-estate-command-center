@@ -10,6 +10,8 @@ import {
   ITI_EXTRACTION_FIELDS,
   ITI_SUPPORTED_DOCUMENTS,
 } from "@/services/iti/prompts";
+import type { ItiProcessedFileResult } from "@/services/iti/types";
+import { partitionItiFiles } from "@/services/iti/upload-validation";
 import { cn } from "@/lib/utils";
 
 export type ItiFileStatus =
@@ -55,6 +57,9 @@ type ItiUploadPanelProps = {
   onFilesChange: (files: ItiUploadFile[]) => void;
   setupError?: string | null;
   extractionError?: string | null;
+  fileErrors?: Record<string, string>;
+  unsupportedError?: string | null;
+  onUnsupportedFiles?: (message: string) => void;
 };
 
 function createUploadFile(file: File): ItiUploadFile {
@@ -70,24 +75,32 @@ export function ItiUploadPanel({
   onFilesChange,
   setupError,
   extractionError,
+  fileErrors,
+  unsupportedError,
+  onUnsupportedFiles,
 }: ItiUploadPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const addFiles = useCallback(
     (incoming: File[]) => {
-      const accepted = incoming.filter(
-        (file) =>
-          file.type === "application/pdf" ||
-          file.type.startsWith("image/") ||
-          file.name.toLowerCase().endsWith(".pdf"),
-      );
-      if (!accepted.length) {
+      const { supported, unsupported } = partitionItiFiles(incoming);
+
+      if (unsupported.length) {
+        onUnsupportedFiles?.(
+          unsupported
+            .map(({ file, error }) => `${file.name}: ${error}`)
+            .join(" "),
+        );
+      }
+
+      if (!supported.length) {
         return;
       }
-      onFilesChange([...files, ...accepted.map(createUploadFile)]);
+
+      onFilesChange([...files, ...supported.map(createUploadFile)]);
     },
-    [files, onFilesChange],
+    [files, onFilesChange, onUnsupportedFiles],
   );
 
   const removeFile = (id: string) => {
@@ -117,6 +130,12 @@ export function ItiUploadPanel({
       {setupError ? (
         <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground">
           {setupError}
+        </p>
+      ) : null}
+
+      {unsupportedError ? (
+        <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground">
+          {unsupportedError}
         </p>
       ) : null}
 
@@ -201,8 +220,11 @@ export function ItiUploadPanel({
                   <p className="truncate text-sm font-medium text-foreground">
                     {entry.file.name}
                   </p>
-                  <p className={typography.caption}>
+                  <p className={cn(typography.caption, "truncate")}>
                     {(entry.file.size / 1024).toFixed(0)} KB
+                    {fileErrors?.[entry.file.name] ? (
+                      <span className="text-destructive"> · {fileErrors[entry.file.name]}</span>
+                    ) : null}
                   </p>
                 </div>
               </div>
@@ -250,4 +272,35 @@ export function updateItiFileStatuses(
   status: ItiFileStatus,
 ): ItiUploadFile[] {
   return files.map((file) => ({ ...file, status }));
+}
+
+export function applyItiProcessedFileResults(
+  files: ItiUploadFile[],
+  results: ItiProcessedFileResult[],
+): ItiUploadFile[] {
+  const resultByName = new Map(results.map((result) => [result.fileName, result]));
+
+  return files.map((file) => {
+    const result = resultByName.get(file.file.name);
+    if (!result) {
+      return file;
+    }
+
+    return {
+      ...file,
+      status: result.status,
+    };
+  });
+}
+
+export function buildItiFileErrorMap(results?: ItiProcessedFileResult[]) {
+  if (!results?.length) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    results
+      .filter((result) => result.error)
+      .map((result) => [result.fileName, result.error as string]),
+  );
 }

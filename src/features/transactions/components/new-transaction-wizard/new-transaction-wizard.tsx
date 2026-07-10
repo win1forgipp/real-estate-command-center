@@ -28,8 +28,8 @@ import { getItiConfigAction } from "@/features/transactions/actions/get-iti-conf
 import { importTransactionAction } from "@/features/transactions/actions/import-transaction";
 import {
   runItiExtractionAction,
-  type RunItiResult,
 } from "@/features/transactions/actions/run-iti-extraction";
+import type { ItiExtractionResult } from "@/services/iti/types";
 import {
   extractionToReviewDefaults,
   importReviewSchema,
@@ -45,6 +45,8 @@ import { cn } from "@/lib/utils";
 import { IntelligentImportReview } from "./intelligent-import-review";
 import {
   ItiUploadPanel,
+  applyItiProcessedFileResults,
+  buildItiFileErrorMap,
   updateItiFileStatuses,
   type ItiUploadFile,
 } from "./iti-upload-panel";
@@ -61,6 +63,12 @@ type WizardScreen =
   | "import-extracting"
   | "import-review"
   | "manual";
+
+type ImportResult = {
+  extractionId: string;
+  documentIds: string[];
+  extraction: ItiExtractionResult;
+};
 
 type NewTransactionWizardProps = {
   open: boolean;
@@ -133,7 +141,9 @@ export function NewTransactionWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [itiSetupError, setItiSetupError] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<RunItiResult | null>(null);
+  const [itiFileErrors, setItiFileErrors] = useState<Record<string, string>>({});
+  const [unsupportedFileMessage, setUnsupportedFileMessage] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importAsArchived, setImportAsArchived] = useState(false);
   const [itiFiles, setItiFiles] = useState<ItiUploadFile[]>([]);
 
@@ -213,6 +223,8 @@ export function NewTransactionWizard({
     setScreen(initialScreen === "iti" ? "import-upload" : "entry");
     setManualStep(1);
     setImportError(null);
+    setItiFileErrors({});
+    setUnsupportedFileMessage(null);
     setImportResult(null);
     setImportAsArchived(false);
     setItiFiles([]);
@@ -257,6 +269,8 @@ export function NewTransactionWizard({
     }
 
     setImportError(null);
+    setItiFileErrors({});
+    setUnsupportedFileMessage(null);
     setIsSubmitting(true);
     setItiFiles(updateItiFileStatuses(itiFiles, "uploading"));
     setScreen("import-extracting");
@@ -268,17 +282,60 @@ export function NewTransactionWizard({
 
     try {
       setItiFiles(updateItiFileStatuses(itiFiles, "processing"));
-      const result = await runItiExtractionAction(formData);
-      setImportResult(result);
+      const response = await runItiExtractionAction(formData);
+
+      if (!response || typeof response.ok !== "boolean") {
+        setItiFiles(updateItiFileStatuses(itiFiles, "failed"));
+        setImportError(
+          "An unexpected response was received from the server. Try again or continue manually.",
+        );
+        setScreen("import-upload");
+        return;
+      }
+
+      if (response.files?.length) {
+        setItiFiles(applyItiProcessedFileResults(itiFiles, response.files));
+        setItiFileErrors(buildItiFileErrorMap(response.files));
+      }
+
+      if (!response.ok) {
+        setImportError(
+          response.error ??
+            "ITI extraction failed. Review your files, retry, or continue manually.",
+        );
+        setScreen("import-upload");
+        notify.error("ITI failed", response.error ?? "Review your files or continue manually.");
+        return;
+      }
+
+      if (!response.extraction || !response.extractionId || !response.documentIds) {
+        setItiFiles(updateItiFileStatuses(itiFiles, "failed"));
+        setImportError(
+          "ITI returned an incomplete response. Try again or continue manually.",
+        );
+        setScreen("import-upload");
+        return;
+      }
+
+      setImportResult({
+        extractionId: response.extractionId,
+        documentIds: response.documentIds,
+        extraction: response.extraction,
+      });
       setImportAsArchived(
-        result.extraction.archiveCandidate.suggestedImportMode === "archived",
+        response.extraction.archiveCandidate.suggestedImportMode === "archived",
       );
-      importForm.reset(extractionToReviewDefaults(result.extraction, agents[0]?.id ?? ""));
+      importForm.reset(
+        extractionToReviewDefaults(response.extraction, agents[0]?.id ?? ""),
+      );
 
-      setItiFiles(updateItiFileStatuses(itiFiles, "review_suggested"));
-
-      if (result.setupMessage && !itiSetupError) {
-        notify.info("ITI setup", result.setupMessage);
+      if (response.warning) {
+        notify.info("Mock extraction used", response.warning);
+      } else if (response.provider === "mock" && !itiSetupError) {
+        notify.info(
+          "Mock extraction used",
+          "OPENAI_API_KEY is not configured. Review mock data before importing.",
+        );
       }
 
       setScreen("import-review");
@@ -410,6 +467,9 @@ export function NewTransactionWizard({
               onFilesChange={setItiFiles}
               setupError={itiSetupError}
               extractionError={importError}
+              fileErrors={itiFileErrors}
+              unsupportedError={unsupportedFileMessage}
+              onUnsupportedFiles={setUnsupportedFileMessage}
             />
           ) : null}
 
@@ -469,7 +529,7 @@ export function NewTransactionWizard({
                     onClick={handleRunIti}
                     disabled={!itiFiles.length || isSubmitting}
                   >
-                    Run ITI
+                    {importError ? "Retry ITI" : "Run ITI"}
                   </PrimaryButton>
                 </div>
               }

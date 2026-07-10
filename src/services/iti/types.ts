@@ -103,5 +103,42 @@ export type ItiProviderResult = {
   rawJson: string;
 };
 
+export type ItiProcessedFileStatus =
+  | "waiting"
+  | "uploading"
+  | "processing"
+  | "parsed_successfully"
+  | "review_suggested"
+  | "unknown_document"
+  | "failed";
+
+export type ItiProcessedFileResult = {
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  status: ItiProcessedFileStatus;
+  documentId?: string;
+  error?: string;
+};
+
+export type RunItiExtractionResponse = {
+  ok: boolean;
+  error?: string;
+  warning?: string;
+  provider?: "openai" | "mock";
+  extractionId?: string;
+  documentIds?: string[];
+  extraction?: ItiExtractionResult;
+  files?: ItiProcessedFileResult[];
+};
+
+/** @deprecated Use RunItiExtractionResponse */
+export type RunItiResult = {
+  extractionId: string;
+  documentIds: string[];
+  extraction: ItiExtractionResult;
+  setupMessage?: string;
+};
+
 /** @deprecated Use ItiExtractionResult */
 export type PurchaseAgreementExtraction = ItiExtractionResult;
