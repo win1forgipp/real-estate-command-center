@@ -27,9 +27,11 @@ import { createTransactionAction } from "@/features/transactions/actions/create-
 import { getItiConfigAction } from "@/features/transactions/actions/get-iti-config";
 import { importTransactionAction } from "@/features/transactions/actions/import-transaction";
 import {
-  runItiExtractionAction,
-} from "@/features/transactions/actions/run-iti-extraction";
-import type { ItiExtractionResult } from "@/services/iti/types";
+  requestItiExtraction,
+  uploadItiFileToBlob,
+} from "@/features/transactions/lib/iti-blob-upload";
+import type { ItiExtractionResult, ItiProcessedFileResult } from "@/services/iti/types";
+import { validateItiSelection } from "@/services/iti/upload-validation";
 import {
   extractionToReviewDefaults,
   importReviewSchema,
@@ -46,7 +48,7 @@ import { IntelligentImportReview } from "./intelligent-import-review";
 import {
   ItiUploadPanel,
   applyItiProcessedFileResults,
-  buildItiFileErrorMap,
+  areItiFilesReadyForExtraction,
   updateItiFileStatuses,
   type ItiUploadFile,
 } from "./iti-upload-panel";
@@ -68,6 +70,7 @@ type ImportResult = {
   extractionId: string;
   documentIds: string[];
   extraction: ItiExtractionResult;
+  processedFiles: ItiProcessedFileResult[];
 };
 
 type NewTransactionWizardProps = {
@@ -141,8 +144,10 @@ export function NewTransactionWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [itiSetupError, setItiSetupError] = useState<string | null>(null);
-  const [itiFileErrors, setItiFileErrors] = useState<Record<string, string>>({});
-  const [unsupportedFileMessage, setUnsupportedFileMessage] = useState<string | null>(null);
+  const [blobSetupError, setBlobSetupError] = useState<string | null>(null);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [isBlobConfigured, setIsBlobConfigured] = useState(false);
+  const [importSessionId, setImportSessionId] = useState(() => crypto.randomUUID());
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importAsArchived, setImportAsArchived] = useState(false);
   const [itiFiles, setItiFiles] = useState<ItiUploadFile[]>([]);
@@ -215,19 +220,144 @@ export function NewTransactionWizard({
     if (open) {
       void getItiConfigAction().then((config) => {
         setItiSetupError(config.isConfigured ? null : config.setupMessage ?? null);
+        setIsBlobConfigured(config.isBlobConfigured);
+        setBlobSetupError(config.isBlobConfigured ? null : config.blobSetupMessage ?? null);
       });
     }
   }, [open]);
+
+  const uploadFileToBlob = useCallback(
+    async (fileId: string, file: File) => {
+      setItiFiles((previous) =>
+        previous.map((entry) =>
+          entry.id === fileId
+            ? { ...entry, status: "uploading", uploadProgress: 0, error: undefined }
+            : entry,
+        ),
+      );
+
+      try {
+        const uploaded = await uploadItiFileToBlob({
+          file,
+          importSessionId,
+          onProgress: (progress) => {
+            setItiFiles((previous) =>
+              previous.map((entry) =>
+                entry.id === fileId ? { ...entry, uploadProgress: progress } : entry,
+              ),
+            );
+          },
+        });
+
+        setItiFiles((previous) =>
+          previous.map((entry) =>
+            entry.id === fileId
+              ? {
+                  ...entry,
+                  status: "uploaded",
+                  uploadProgress: 100,
+                  blobUrl: uploaded.url,
+                  blobPathname: uploaded.pathname,
+                  mimeType: uploaded.mimeType,
+                  error: undefined,
+                }
+              : entry,
+          ),
+        );
+      } catch (error) {
+        setItiFiles((previous) =>
+          previous.map((entry) =>
+            entry.id === fileId
+              ? {
+                  ...entry,
+                  status: "failed",
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : "Upload failed. Check Blob storage configuration and try again.",
+                }
+              : entry,
+          ),
+        );
+      }
+    },
+    [importSessionId],
+  );
+
+  const handleAddFiles = useCallback(
+    (incoming: File[]) => {
+      if (!incoming.length) {
+        return;
+      }
+
+      if (!isBlobConfigured) {
+        setSelectionError(
+          blobSetupError ??
+            "BLOB_READ_WRITE_TOKEN is not configured. ITI uploads require Vercel Blob storage.",
+        );
+        return;
+      }
+
+      const { supported, unsupported, errors } = validateItiSelection(
+        incoming,
+        itiFiles.map((entry) => entry.file),
+      );
+
+      if (unsupported.length || errors.length) {
+        setSelectionError(
+          [
+            ...unsupported.map(({ file, error }) => `${file.name}: ${error}`),
+            ...errors,
+          ].join(" "),
+        );
+      } else {
+        setSelectionError(null);
+      }
+
+      if (!supported.length) {
+        return;
+      }
+
+      const newEntries: ItiUploadFile[] = supported.map((file) => ({
+        id: crypto.randomUUID(),
+        file,
+        status: "waiting",
+      }));
+
+      setItiFiles((previous) => [...previous, ...newEntries]);
+
+      newEntries.forEach((entry) => {
+        void uploadFileToBlob(entry.id, entry.file);
+      });
+    },
+    [blobSetupError, isBlobConfigured, itiFiles, uploadFileToBlob],
+  );
+
+  const handleRemoveFile = useCallback((fileId: string) => {
+    setItiFiles((previous) => previous.filter((entry) => entry.id !== fileId));
+  }, []);
+
+  const handleRetryFile = useCallback(
+    (fileId: string) => {
+      const entry = itiFiles.find((file) => file.id === fileId);
+      if (!entry) {
+        return;
+      }
+
+      void uploadFileToBlob(fileId, entry.file);
+    },
+    [itiFiles, uploadFileToBlob],
+  );
 
   const resetWizard = useCallback(() => {
     setScreen(initialScreen === "iti" ? "import-upload" : "entry");
     setManualStep(1);
     setImportError(null);
-    setItiFileErrors({});
-    setUnsupportedFileMessage(null);
+    setSelectionError(null);
     setImportResult(null);
     setImportAsArchived(false);
     setItiFiles([]);
+    setImportSessionId(crypto.randomUUID());
     form.reset(getDefaultValues(agents));
     setIsSubmitting(false);
   }, [agents, form, initialScreen]);
@@ -252,7 +382,7 @@ export function NewTransactionWizard({
 
     if (screen === "import-review") {
       setScreen("import-upload");
-      setItiFiles(updateItiFileStatuses(itiFiles, "waiting"));
+      setItiFiles(updateItiFileStatuses(itiFiles, "uploaded"));
       return;
     }
 
@@ -268,37 +398,41 @@ export function NewTransactionWizard({
       return;
     }
 
+    if (!areItiFilesReadyForExtraction(itiFiles)) {
+      setImportError("Wait for all files to finish uploading before running ITI.");
+      return;
+    }
+
     setImportError(null);
-    setItiFileErrors({});
-    setUnsupportedFileMessage(null);
+    setSelectionError(null);
     setIsSubmitting(true);
-    setItiFiles(updateItiFileStatuses(itiFiles, "uploading"));
+    setItiFiles(updateItiFileStatuses(itiFiles, "processing"));
     setScreen("import-extracting");
 
-    const formData = new FormData();
-    itiFiles.forEach((entry) => {
-      formData.append("documents", entry.file);
-    });
-
     try {
-      setItiFiles(updateItiFileStatuses(itiFiles, "processing"));
-      const response = await runItiExtractionAction(formData);
-
-      if (!response || typeof response.ok !== "boolean") {
-        setItiFiles(updateItiFileStatuses(itiFiles, "failed"));
-        setImportError(
-          "An unexpected response was received from the server. Try again or continue manually.",
-        );
-        setScreen("import-upload");
-        return;
-      }
+      const response = await requestItiExtraction({
+        importSessionId,
+        files: itiFiles.map((entry) => ({
+          name: entry.file.name,
+          url: entry.blobUrl as string,
+          pathname: entry.blobPathname as string,
+          mimeType: entry.mimeType ?? entry.file.type,
+          size: entry.file.size,
+        })),
+      });
 
       if (response.files?.length) {
         setItiFiles(applyItiProcessedFileResults(itiFiles, response.files));
-        setItiFileErrors(buildItiFileErrorMap(response.files));
       }
 
       if (!response.ok) {
+        setItiFiles((previous) =>
+          previous.map((entry) =>
+            entry.status === "processing"
+              ? { ...entry, status: "uploaded", error: response.error }
+              : entry,
+          ),
+        );
         setImportError(
           response.error ??
             "ITI extraction failed. Review your files, retry, or continue manually.",
@@ -309,10 +443,14 @@ export function NewTransactionWizard({
       }
 
       if (!response.extraction || !response.extractionId || !response.documentIds) {
-        setItiFiles(updateItiFileStatuses(itiFiles, "failed"));
-        setImportError(
-          "ITI returned an incomplete response. Try again or continue manually.",
+        setItiFiles((previous) =>
+          previous.map((entry) =>
+            entry.status === "processing"
+              ? { ...entry, status: "uploaded", error: "Incomplete extraction response." }
+              : entry,
+          ),
         );
+        setImportError("ITI returned an incomplete response. Try again or continue manually.");
         setScreen("import-upload");
         return;
       }
@@ -321,6 +459,7 @@ export function NewTransactionWizard({
         extractionId: response.extractionId,
         documentIds: response.documentIds,
         extraction: response.extraction,
+        processedFiles: response.files ?? [],
       });
       setImportAsArchived(
         response.extraction.archiveCandidate.suggestedImportMode === "archived",
@@ -340,7 +479,20 @@ export function NewTransactionWizard({
 
       setScreen("import-review");
     } catch (error) {
-      setItiFiles(updateItiFileStatuses(itiFiles, "failed"));
+      setItiFiles((previous) =>
+        previous.map((entry) =>
+          entry.status === "processing"
+            ? {
+                ...entry,
+                status: "uploaded",
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "ITI extraction failed. Retry or continue manually.",
+              }
+            : entry,
+        ),
+      );
       setImportError(
         error instanceof Error
           ? error.message
@@ -366,11 +518,30 @@ export function NewTransactionWizard({
     setIsSubmitting(true);
 
     try {
+      const documentSummaries = Object.fromEntries(
+        importResult.processedFiles
+          .filter((file) => file.documentId)
+          .map((file) => {
+            const extracted = importResult.extraction.documents.find(
+              (doc) => doc.fileName === file.fileName,
+            );
+
+            return [
+              file.documentId as string,
+              {
+                summary: extracted?.summary ?? undefined,
+                confidenceScore: file.confidenceScore ?? extracted?.confidenceScore,
+              },
+            ];
+          }),
+      );
+
       const result = await importTransactionAction({
         review: importForm.getValues(),
         documentIds: importResult.documentIds,
         extractionId: importResult.extractionId,
         importAsArchived,
+        documentSummaries,
       });
 
       notify.success(
@@ -464,12 +635,13 @@ export function NewTransactionWizard({
           {screen === "import-upload" ? (
             <ItiUploadPanel
               files={itiFiles}
-              onFilesChange={setItiFiles}
+              onAddFiles={handleAddFiles}
+              onRemoveFile={handleRemoveFile}
+              onRetryFile={handleRetryFile}
               setupError={itiSetupError}
+              blobSetupError={blobSetupError}
               extractionError={importError}
-              fileErrors={itiFileErrors}
-              unsupportedError={unsupportedFileMessage}
-              onUnsupportedFiles={setUnsupportedFileMessage}
+              selectionError={selectionError}
             />
           ) : null}
 
@@ -527,7 +699,9 @@ export function NewTransactionWizard({
                     type="button"
                     className="w-full sm:w-auto"
                     onClick={handleRunIti}
-                    disabled={!itiFiles.length || isSubmitting}
+                    disabled={
+                      !areItiFilesReadyForExtraction(itiFiles) || isSubmitting
+                    }
                   >
                     {importError ? "Retry ITI" : "Run ITI"}
                   </PrimaryButton>

@@ -13,6 +13,7 @@ export async function importTransactionAction(input: {
   documentIds: string[];
   extractionId: string;
   importAsArchived: boolean;
+  documentSummaries?: Record<string, { summary?: string; confidenceScore?: number }>;
 }) {
   const review = importReviewSchema.parse(input.review);
 
@@ -21,6 +22,7 @@ export async function importTransactionAction(input: {
     documentIds: input.documentIds,
     extractionId: input.extractionId,
     importAsArchived: input.importAsArchived,
+    documentSummaries: input.documentSummaries,
   });
 
   revalidatePath("/");

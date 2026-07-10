@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, FileText, Upload, X } from "lucide-react";
+import { CheckCircle2, FileText, RotateCcw, Upload, X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 import { StatusBadge } from "@/components/design-system/badges/status-badge";
@@ -10,13 +10,18 @@ import {
   ITI_EXTRACTION_FIELDS,
   ITI_SUPPORTED_DOCUMENTS,
 } from "@/services/iti/prompts";
-import type { ItiProcessedFileResult } from "@/services/iti/types";
-import { partitionItiFiles } from "@/services/iti/upload-validation";
+import {
+  ITI_MAX_FILE_SIZE_BYTES,
+  ITI_MAX_TOTAL_SIZE_BYTES,
+} from "@/services/iti/constants";
+import type { ItiDocumentType, ItiProcessedFileResult } from "@/services/iti/types";
+import { getItiPackageSummary } from "@/services/iti/upload-validation";
 import { cn } from "@/lib/utils";
 
 export type ItiFileStatus =
   | "waiting"
   | "uploading"
+  | "uploaded"
   | "processing"
   | "parsed_successfully"
   | "review_suggested"
@@ -27,11 +32,19 @@ export type ItiUploadFile = {
   id: string;
   file: File;
   status: ItiFileStatus;
+  uploadProgress?: number;
+  blobUrl?: string;
+  blobPathname?: string;
+  mimeType?: string;
+  detectedDocumentType?: ItiDocumentType;
+  confidenceScore?: number;
+  error?: string;
 };
 
 const statusLabels: Record<ItiFileStatus, string> = {
   waiting: "Waiting",
   uploading: "Uploading",
+  uploaded: "Uploaded",
   processing: "Processing",
   parsed_successfully: "Parsed Successfully",
   review_suggested: "Review Suggested",
@@ -45,6 +58,7 @@ const statusVariants: Record<
 > = {
   waiting: "default",
   uploading: "info",
+  uploaded: "success",
   processing: "info",
   parsed_successfully: "success",
   review_suggested: "warning",
@@ -54,58 +68,43 @@ const statusVariants: Record<
 
 type ItiUploadPanelProps = {
   files: ItiUploadFile[];
-  onFilesChange: (files: ItiUploadFile[]) => void;
+  onAddFiles: (files: File[]) => void;
+  onRemoveFile: (id: string) => void;
+  onRetryFile: (id: string) => void;
   setupError?: string | null;
+  blobSetupError?: string | null;
   extractionError?: string | null;
-  fileErrors?: Record<string, string>;
-  unsupportedError?: string | null;
-  onUnsupportedFiles?: (message: string) => void;
+  selectionError?: string | null;
 };
 
-function createUploadFile(file: File): ItiUploadFile {
-  return {
-    id: crypto.randomUUID(),
-    file,
-    status: "waiting",
-  };
+function formatBytes(bytes: number) {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${(bytes / 1024).toFixed(0)} KB`;
 }
 
 export function ItiUploadPanel({
   files,
-  onFilesChange,
+  onAddFiles,
+  onRemoveFile,
+  onRetryFile,
   setupError,
+  blobSetupError,
   extractionError,
-  fileErrors,
-  unsupportedError,
-  onUnsupportedFiles,
+  selectionError,
 }: ItiUploadPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  const addFiles = useCallback(
-    (incoming: File[]) => {
-      const { supported, unsupported } = partitionItiFiles(incoming);
-
-      if (unsupported.length) {
-        onUnsupportedFiles?.(
-          unsupported
-            .map(({ file, error }) => `${file.name}: ${error}`)
-            .join(" "),
-        );
-      }
-
-      if (!supported.length) {
-        return;
-      }
-
-      onFilesChange([...files, ...supported.map(createUploadFile)]);
-    },
-    [files, onFilesChange, onUnsupportedFiles],
+  const packageSummary = getItiPackageSummary(
+    files.map((file) => ({ size: file.file.size, status: file.status })),
   );
 
-  const removeFile = (id: string) => {
-    onFilesChange(files.filter((entry) => entry.id !== id));
-  };
+  const handleIncomingFiles = useCallback((incoming: File[]) => {
+    if (incoming.length) {
+      onAddFiles(incoming);
+    }
+  }, [onAddFiles]);
 
   return (
     <div className="space-y-5">
@@ -127,15 +126,21 @@ export function ItiUploadPanel({
         </ul>
       </div>
 
+      {blobSetupError ? (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          {blobSetupError}
+        </p>
+      ) : null}
+
       {setupError ? (
         <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground">
           {setupError}
         </p>
       ) : null}
 
-      {unsupportedError ? (
+      {selectionError ? (
         <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground">
-          {unsupportedError}
+          {selectionError}
         </p>
       ) : null}
 
@@ -161,7 +166,7 @@ export function ItiUploadPanel({
         onDrop={(event) => {
           event.preventDefault();
           setIsDragging(false);
-          addFiles(Array.from(event.dataTransfer.files));
+          handleIncomingFiles(Array.from(event.dataTransfer.files));
         }}
         className={cn(
           "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-10 text-center transition-colors",
@@ -175,17 +180,18 @@ export function ItiUploadPanel({
           Drag and drop PDFs or images here
         </p>
         <p className={cn(typography.caption, "mt-1")}>
-          Mobile: use file picker or camera scan when supported
+          Up to {Math.floor(ITI_MAX_FILE_SIZE_BYTES / (1024 * 1024))} MB per file,{" "}
+          {Math.floor(ITI_MAX_TOTAL_SIZE_BYTES / (1024 * 1024))} MB total
         </p>
         <input
           ref={inputRef}
           type="file"
-          accept="application/pdf,image/*"
+          accept="application/pdf,image/jpeg,image/png,image/heic,image/heif,image/*"
           capture="environment"
           multiple
           className="hidden"
           onChange={(event) => {
-            addFiles(Array.from(event.target.files ?? []));
+            handleIncomingFiles(Array.from(event.target.files ?? []));
             event.target.value = "";
           }}
         />
@@ -208,44 +214,88 @@ export function ItiUploadPanel({
       </div>
 
       {files.length ? (
-        <ul className="space-y-2">
-          {files.map((entry) => (
-            <li
-              key={entry.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-3 py-2.5"
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <FileText className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {entry.file.name}
-                  </p>
-                  <p className={cn(typography.caption, "truncate")}>
-                    {(entry.file.size / 1024).toFixed(0)} KB
-                    {fileErrors?.[entry.file.name] ? (
-                      <span className="text-destructive"> · {fileErrors[entry.file.name]}</span>
+        <div className="space-y-3">
+          <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3 text-sm">
+            <p className="font-medium text-foreground">
+              {packageSummary.fileCount} file{packageSummary.fileCount === 1 ? "" : "s"} ·{" "}
+              {formatBytes(packageSummary.totalSize)}
+            </p>
+            <p className={cn(typography.caption, "mt-1")}>
+              {packageSummary.readyForIti
+                ? "All files uploaded. Ready for ITI."
+                : packageSummary.failedCount > 0
+                  ? `${packageSummary.uploadedCount} uploaded, ${packageSummary.failedCount} failed`
+                  : packageSummary.uploadingCount > 0
+                    ? "Uploading files to secure storage..."
+                    : "Waiting for uploads to complete"}
+            </p>
+          </div>
+
+          <ul className="space-y-2">
+            {files.map((entry) => (
+              <li
+                key={entry.id}
+                className="rounded-xl border border-border/70 bg-card px-3 py-2.5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {entry.file.name}
+                      </p>
+                      <p className={cn(typography.caption, "truncate")}>
+                        {formatBytes(entry.file.size)}
+                        {entry.detectedDocumentType
+                          ? ` · ${entry.detectedDocumentType.replaceAll("_", " ")}`
+                          : null}
+                        {entry.confidenceScore != null
+                          ? ` · ${entry.confidenceScore}% confidence`
+                          : null}
+                      </p>
+                      {entry.error ? (
+                        <p className="mt-1 text-xs text-destructive">{entry.error}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusBadge
+                      label={statusLabels[entry.status]}
+                      variant={statusVariants[entry.status]}
+                    />
+                    {entry.status === "failed" ? (
+                      <button
+                        type="button"
+                        className="text-primary"
+                        onClick={() => onRetryFile(entry.id)}
+                        aria-label={`Retry upload for ${entry.file.name}`}
+                      >
+                        <RotateCcw className="size-4" />
+                      </button>
                     ) : null}
-                  </p>
+                    <button
+                      type="button"
+                      className="text-destructive"
+                      onClick={() => onRemoveFile(entry.id)}
+                      aria-label={`Remove ${entry.file.name}`}
+                      disabled={entry.status === "uploading" || entry.status === "processing"}
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <StatusBadge
-                  label={statusLabels[entry.status]}
-                  variant={statusVariants[entry.status]}
-                />
-                <button
-                  type="button"
-                  className="text-destructive"
-                  onClick={() => removeFile(entry.id)}
-                  aria-label={`Remove ${entry.file.name}`}
-                  disabled={entry.status === "uploading" || entry.status === "processing"}
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                {entry.status === "uploading" ? (
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${entry.uploadProgress ?? 0}%` }}
+                    />
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       <div className="rounded-2xl border border-border/70 bg-muted/20 p-5">
@@ -259,8 +309,7 @@ export function ItiUploadPanel({
           ))}
         </ul>
         <p className={cn(typography.caption, "mt-3 text-muted-foreground")}>
-          {/* TODO: Production file storage — migrate from local .data/uploads to Vercel Blob or S3-compatible storage. */}
-          Document files are processed temporarily; only metadata is stored in Turso for v1.
+          Files upload directly to Vercel Blob. Only document metadata is stored in Turso.
         </p>
       </div>
     </div>
@@ -270,8 +319,11 @@ export function ItiUploadPanel({
 export function updateItiFileStatuses(
   files: ItiUploadFile[],
   status: ItiFileStatus,
+  id?: string,
 ): ItiUploadFile[] {
-  return files.map((file) => ({ ...file, status }));
+  return files.map((file) =>
+    !id || file.id === id ? { ...file, status, error: status === "failed" ? file.error : undefined } : file,
+  );
 }
 
 export function applyItiProcessedFileResults(
@@ -289,6 +341,11 @@ export function applyItiProcessedFileResults(
     return {
       ...file,
       status: result.status,
+      error: result.error,
+      detectedDocumentType: result.documentType,
+      confidenceScore: result.confidenceScore,
+      blobUrl: result.blobUrl ?? file.blobUrl,
+      blobPathname: result.blobPathname ?? file.blobPathname,
     };
   });
 }
@@ -303,4 +360,8 @@ export function buildItiFileErrorMap(results?: ItiProcessedFileResult[]) {
       .filter((result) => result.error)
       .map((result) => [result.fileName, result.error as string]),
   );
+}
+
+export function areItiFilesReadyForExtraction(files: ItiUploadFile[]) {
+  return files.length > 0 && files.every((file) => file.status === "uploaded" && file.blobUrl);
 }

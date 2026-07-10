@@ -265,11 +265,67 @@ Fixed
 ### REC-007 Follow-up
 
 - Dedicated Archived Transactions list view (currently accessible via workspace URL only).
-- Production object storage migration (Vercel Blob / S3) — local `.data/uploads/` used in v1.
 - OCR for image uploads.
 - Wire workspace Upload Purchase Agreement action to open ITI directly on transactions page via event (route fallback exists).
+- Scheduled cleanup for orphaned temporary Blob files older than 24 hours.
+- Restrict Blob uploads to authenticated users once auth ships.
 
 ## REC-008
+
+Title:
+Fix ITI upload server response handling
+
+Priority:
+P0
+
+Category:
+Bug
+
+Area:
+ITI / File Upload / Server Action
+
+Implementation:
+- Server action now always returns a predictable `{ ok, error?, extraction?, files?, warning?, provider? }` shape instead of throwing.
+- Increased Next.js server action and proxy body limits to 25mb for multi-PDF uploads.
+- Mock extraction fallback when `OPENAI_API_KEY` is missing returns `ok: true` with a warning.
+- Added dev-only ITI logging for file counts, names, types, sizes, provider, and status.
+- Frontend shows server and file-level errors, preserves selected files, and supports Retry ITI.
+
+Status:
+Fixed
+
+## REC-009
+
+Title:
+Move ITI uploads to direct object storage
+
+Priority:
+P0
+
+Category:
+Production Architecture Bug
+
+Area:
+ITI / File Upload / Vercel
+
+Implementation:
+- Browser uploads files directly to Vercel Blob via `@vercel/blob/client` and `/api/blob/upload`.
+- ITI extraction moved to `POST /api/iti/extract` with JSON metadata only (no multipart file bodies).
+- Server fetches documents from validated Blob URLs with SSRF protections.
+- Per-file upload progress, retry, package summary, and Run ITI gating until all uploads succeed.
+- Document metadata stores `blob_url`, `blob_pathname`, `import_session_id`, and `processing_status`.
+- Temporary uploads marked `temporary`; confirmed on transaction import.
+
+Status:
+Fixed
+
+### REC-009 Follow-up
+
+- Verify on deployed Vercel environment with files larger than 4.5 MB and multi-file packages over 4.5 MB total.
+- Scheduled cleanup job for orphaned temporary Blob files older than 24 hours.
+- Authentication gate for Blob upload token generation before production launch.
+
+## Button Functionality Audit
 
 Title:
 Fix ITI upload server response handling

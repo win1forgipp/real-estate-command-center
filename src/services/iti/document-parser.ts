@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getAbsoluteStoragePath } from "@/services/document-storage";
+import { fetchBlobDocumentBuffer } from "@/services/iti/blob-fetch";
 import type { ItiDocumentType } from "@/services/iti/types";
 
 export function detectItiDocumentType(fileName: string): ItiDocumentType {
@@ -34,17 +34,13 @@ export function detectItiDocumentType(fileName: string): ItiDocumentType {
   return "other";
 }
 
-export async function parseDocumentText(storagePath: string, fileType: string) {
-  const absolutePath = getAbsoluteStoragePath(storagePath);
-
+export async function parseDocumentTextFromBuffer(buffer: Buffer, fileType: string) {
   if (fileType.startsWith("image/")) {
-    return `[Image: ${storagePath}. OCR not enabled in ITI v1.]`;
+    return "[Image uploaded. OCR not enabled in ITI v1.]";
   }
 
   try {
     const { PDFParse } = await import("pdf-parse");
-    const { readFile } = await import("node:fs/promises");
-    const buffer = await readFile(absolutePath);
     const parser = new PDFParse({ data: buffer });
     const textResult = await parser.getText();
     await parser.destroy();
@@ -54,14 +50,43 @@ export async function parseDocumentText(storagePath: string, fileType: string) {
   }
 }
 
-export async function parseUploadedDocuments(
-  files: { storagePath: string; fileType: string; fileName: string }[],
+export async function parseDocumentTextFromBlob(blobUrl: string, fileType: string, fileSize: number) {
+  if (fileType.startsWith("image/")) {
+    return "[Image uploaded. OCR not enabled in ITI v1.]";
+  }
+
+  const { buffer } = await fetchBlobDocumentBuffer(blobUrl, fileSize);
+  return parseDocumentTextFromBuffer(buffer, fileType);
+}
+
+export async function parseUploadedBlobDocuments(
+  files: {
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    blobUrl: string;
+  }[],
 ) {
   const chunks = await Promise.all(
     files.map(async (file) => {
-      const text = await parseDocumentText(file.storagePath, file.fileType);
+      const text = await parseDocumentTextFromBlob(
+        file.blobUrl,
+        file.fileType,
+        file.fileSize,
+      );
       return `--- ${file.fileName} ---\n${text}`;
     }),
   );
   return chunks.join("\n\n");
 }
+
+function getDocumentTextChunk(documentText: string, fileName: string) {
+  const marker = `--- ${fileName} ---`;
+  if (!documentText.includes(marker)) {
+    return "";
+  }
+
+  return documentText.split(marker)[1]?.split("\n--- ")[0]?.trim() ?? "";
+}
+
+export { getDocumentTextChunk };

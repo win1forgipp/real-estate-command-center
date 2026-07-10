@@ -214,10 +214,13 @@ export const documents = sqliteTable(
   {
     id: id(),
     transactionId: text("transaction_id").references(() => transactions.id),
+    importSessionId: text("import_session_id"),
     fileName: text("file_name").notNull(),
     fileType: text("file_type").notNull(),
     fileSize: integer("file_size").notNull(),
     storagePath: text("storage_path").notNull(),
+    blobUrl: text("blob_url"),
+    blobPathname: text("blob_pathname"),
     documentType: text("document_type", {
       enum: [
         "purchase_agreement",
@@ -232,9 +235,17 @@ export const documents = sqliteTable(
     }).notNull(),
     extractedSummary: text("extracted_summary"),
     confidenceScore: integer("confidence_score"),
+    processingStatus: text("processing_status", {
+      enum: ["temporary", "confirmed"],
+    })
+      .notNull()
+      .default("temporary"),
     ...timestamps,
   },
-  (table) => [index("documents_transaction_id_idx").on(table.transactionId)],
+  (table) => [
+    index("documents_transaction_id_idx").on(table.transactionId),
+    index("documents_import_session_id_idx").on(table.importSessionId),
+  ],
 );
 
 export const aiExtractions = sqliteTable(

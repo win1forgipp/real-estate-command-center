@@ -25,6 +25,22 @@ export type ItiUploadedDocumentMeta = {
   fileSize: number;
   documentType: ItiDocumentType;
   storagePath: string;
+  blobUrl: string;
+  blobPathname: string;
+  importSessionId: string;
+};
+
+export type ItiBlobFileInput = {
+  name: string;
+  url: string;
+  pathname: string;
+  mimeType: string;
+  size: number;
+};
+
+export type ItiExtractRequestBody = {
+  importSessionId: string;
+  files: ItiBlobFileInput[];
 };
 
 export type ItiExtractedDocumentInfo = {
@@ -106,6 +122,7 @@ export type ItiProviderResult = {
 export type ItiProcessedFileStatus =
   | "waiting"
   | "uploading"
+  | "uploaded"
   | "processing"
   | "parsed_successfully"
   | "review_suggested"
@@ -118,13 +135,17 @@ export type ItiProcessedFileResult = {
   fileSize: number;
   status: ItiProcessedFileStatus;
   documentId?: string;
+  documentType?: ItiDocumentType;
+  confidenceScore?: number;
   error?: string;
+  blobUrl?: string;
+  blobPathname?: string;
 };
 
 export type RunItiExtractionResponse = {
   ok: boolean;
   error?: string;
-  warning?: string;
+  warning?: string | null;
   provider?: "openai" | "mock";
   extractionId?: string;
   documentIds?: string[];

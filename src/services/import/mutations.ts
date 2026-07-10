@@ -3,7 +3,7 @@ import "server-only";
 import { getDb } from "@/db/client";
 import { contacts, deadlines, notes, transactions } from "@/db/schema";
 import { acceptAiExtraction } from "@/services/ai-extractions/mutations";
-import { linkDocumentsToTransaction } from "@/services/documents/mutations";
+import { confirmDocumentsForTransaction } from "@/services/documents/mutations";
 import type { ImportReviewInput } from "@/features/transactions/schemas/import-transaction-schema";
 
 function splitName(fullName: string) {
@@ -71,9 +71,10 @@ export async function createTransactionFromImport(input: {
   documentIds: string[];
   extractionId: string;
   importAsArchived: boolean;
+  documentSummaries?: Record<string, { summary?: string; confidenceScore?: number }>;
 }) {
   const db = getDb();
-  const { review, documentIds, extractionId, importAsArchived } = input;
+  const { review, documentIds, extractionId, importAsArchived, documentSummaries } = input;
   const { listingSide, sellingSide } = getSideFlags(review.transactionType);
   const transactionStatus = resolveTransactionStatus(review, importAsArchived);
 
@@ -179,7 +180,7 @@ export async function createTransactionFromImport(input: {
     authorUserId: review.assignedUserId,
   });
 
-  await linkDocumentsToTransaction(documentIds, transaction.id);
+  await confirmDocumentsForTransaction(documentIds, transaction.id, documentSummaries);
   await acceptAiExtraction(extractionId, transaction.id);
 
   return { id: transaction.id };
