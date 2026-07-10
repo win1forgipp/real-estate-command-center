@@ -11,6 +11,10 @@ import {
   users,
 } from "@/db/schema";
 import { getDb } from "@/db/client";
+import {
+  getTransactionSchemaWarning,
+  isTransactionSchemaReady,
+} from "@/db/schema-compatibility";
 import type {
   DeadlineDto,
   LinkDto,
@@ -133,6 +137,11 @@ function getNextDeadlineLabel(
 }
 
 export async function getTransactionsList(): Promise<TransactionListItem[]> {
+  if (!(await isTransactionSchemaReady())) {
+    await getTransactionSchemaWarning();
+    return [];
+  }
+
   const db = getDb();
 
   const [rows, allDeadlines] = await Promise.all([
@@ -174,6 +183,11 @@ export async function getTransactionsList(): Promise<TransactionListItem[]> {
 export async function getTransactionWorkspace(
   id: string,
 ): Promise<TransactionWorkspaceData | null> {
+  if (!(await isTransactionSchemaReady())) {
+    await getTransactionSchemaWarning();
+    return null;
+  }
+
   const db = getDb();
 
   const [transactionRow] = await db

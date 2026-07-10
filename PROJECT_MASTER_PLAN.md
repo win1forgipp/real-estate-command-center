@@ -667,4 +667,8 @@ This future milestone will allow users to upload or scan real estate documents, 
 - This milestone should plug into Transaction Workspaces and the Global Activity Timeline architecture.
 - Extraction must always require user confirmation before writing to the database.
 - The source document must remain linked to the transaction record after extraction.
+
+## Deployment
+
+Database migrations are applied manually before deploy. See [DEPLOYMENT.md](./DEPLOYMENT.md) for the full checklist.
 - Build only after core workspace, document storage, and activity timeline foundations are in place.
